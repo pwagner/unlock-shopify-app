@@ -111,3 +111,6 @@ config/tunnel.pid
 
 # next build output
 .next/
+
+ # Shopify App CLI config
+.shopify-cli.yml
