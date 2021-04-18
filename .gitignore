@@ -102,3 +102,12 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Ignore Apple macOS Desktop Services Store
+.DS_Store
+
+# ngrok tunnel file
+config/tunnel.pid
+
+# next build output
+.next/
