@@ -1,7 +1,7 @@
 {
-  "name": "shopify-app-node",
-  "version": "1.0.0",
-  "description": "Shopify's node app for CLI tool",
+  "name": "unlock-shopify-app",
+  "version": "0.0.1",
+  "description": "Unlock Protocol integration for Shopify stores",
   "scripts": {
     "test": "jest",
     "dev": "cross-env NODE_ENV=development nodemon ./server/index.js --watch ./server/index.js",
@@ -10,12 +10,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Shopify/shopify-app-node.git"
+    "url": "git+https://github.com/pwagner/unlock-shopify-app.git"
   },
-  "author": "Shopify Inc.",
+  "author": "pwagner",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/shopify/shopify-app-node/issues"
+    "url": "https://github.com/pwagner/unlock-shopify-app/issues"
   },
   "dependencies": {
     "@babel/core": "7.12.10",
