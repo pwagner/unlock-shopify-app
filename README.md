@@ -12,13 +12,13 @@ Boilerplate based on [Shopify-App-CLI](https://github.com/Shopify/shopify-app-cl
 
 ## Installation
 
- run:
+run:
 
 ```sh
 ~/ $ shopify create project APP_NAME
 ```
 
-**Note:** Shopify merchants may find it easier to use the *free app* from the Shopify App Store (coming soon).
+**Note:** Shopify merchants may find it easier to use the _free app_ from the Shopify App Store (coming soon).
 
 ## Requirements
 
@@ -28,9 +28,9 @@ Boilerplate based on [Shopify-App-CLI](https://github.com/Shopify/shopify-app-cl
 
 ## Features
 
-- A Shopify merchant adds one or more **Locks** to their online store, and assigns benefits to them. (TODO)
-- Customers can see the possible benefits associated with locks/memberships – for example 10% discount, or free shipping. (TODO)
-- Customers with a fitting **Key** get their benefit applied. (TODO)
+- A Shopify merchant adds one **Lock** (or more, once supported) to their online store, and assigns a benefit to each.
+- Customers can see the possible benefits associated with locks/memberships – for example 10% discount, or free shipping. An example code snippet can be copy-pasted into a template file of the Shopify theme.
+- Customers with a fitting **Key** get their benefit applied. At the moment, the only supported benefits of the type _discount code_ are supported.
 
 ## License
 
