@@ -623,7 +623,20 @@ app.prepare().then(async () => {
           }
         });
 
-        // TODO: delete assets
+        const assetsRes = await client.get({
+          path: "assets",
+        });
+        const { assets } = assetsRes.body;
+        console.log("Deleting assets", assets);
+        assets.map(async ({ id }) => {
+          try {
+            await client.delete({
+              path: `assets/${id}`,
+            });
+          } catch (err) {
+            console.log("Error trying to delete assets", err);
+          }
+        });
 
         ctx.body = {
           status: "success",

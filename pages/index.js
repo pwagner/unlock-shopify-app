@@ -81,7 +81,7 @@ class Index extends React.Component {
               <TextStyle variation="subdued">
                 <Heading>No Lock?</Heading>
                 <p>
-                  You can create your own locks in the{" "}
+                  You can create your own locks in the
                   <a
                     href="https://app.unlock-protocol.com/dashboard"
                     target="_blank"
