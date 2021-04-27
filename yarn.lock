@@ -1194,6 +1194,11 @@
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
 
+"@lukeed/csprng@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@lukeed/csprng/-/csprng-1.0.0.tgz#733a122382749d27e2e46ec38f8c71c9d53a9636"
+  integrity sha512-ruuGHsnabmObBdeMg3vKdGRmh06Oog3eFpf/Tk6X0kDSJDpJTDCj2dqdp1+0VjzIUgHlFF9GBm7uFqfYhhdX9g==
+
 "@next/env@10.1.3":
   version "10.1.3"
   resolved "https://registry.yarnpkg.com/@next/env/-/env-10.1.3.tgz#29e5d62919b4a7b1859f8d36169848dc3f5ddebe"
@@ -2584,6 +2589,11 @@ builtin-status-codes@^3.0.0:
   resolved "https://registry.yarnpkg.com/builtin-status-codes/-/builtin-status-codes-3.0.0.tgz#85982878e21b98e1c66425e03d0174788f569ee8"
   integrity sha1-hZgoeOIbmOHGZCXgPQF0eI9Wnug=
 
+bytes@1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/bytes/-/bytes-1.0.0.tgz#3569ede8ba34315fab99c3e92cb04c7220de1fa8"
+  integrity sha1-NWnt6Lo0MV+rmcPpLLBMciDeH6g=
+
 bytes@3.1.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/bytes/-/bytes-3.1.0.tgz#f6cf7933a360e0588fa9fde85651cdc7f805d1f6"
@@ -2875,6 +2885,14 @@ clone-response@^1.0.2:
   integrity sha1-0dyXOSAxTfZ/vrlCI7TuNQI56Ws=
   dependencies:
     mimic-response "^1.0.0"
+
+co-body@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/co-body/-/co-body-2.0.0.tgz#7302abb8e88a2ce084f67ca4f3162c1b54a64b67"
+  integrity sha1-cwKruOiKLOCE9nyk8xYsG1SmS2c=
+  dependencies:
+    qs "~2.4.1"
+    raw-body "~1.3.4"
 
 co@^4.6.0:
   version "4.6.0"
@@ -4520,6 +4538,11 @@ iconv-lite@0.4.24:
   dependencies:
     safer-buffer ">= 2.1.2 < 3"
 
+iconv-lite@0.4.8:
+  version "0.4.8"
+  resolved "https://registry.yarnpkg.com/iconv-lite/-/iconv-lite-0.4.8.tgz#c6019a7595f2cefca702eab694a010bcd9298d20"
+  integrity sha1-xgGadZXyzvynAuq2lKAQvNkpjSA=
+
 iconv-lite@^0.6.2:
   version "0.6.2"
   resolved "https://registry.yarnpkg.com/iconv-lite/-/iconv-lite-0.6.2.tgz#ce13d1875b0c3a674bd6a04b7f76b01b1b6ded01"
@@ -5626,6 +5649,13 @@ kleur@^3.0.3:
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/kleur/-/kleur-3.0.3.tgz#a79c9ecc86ee1ce3fa6206d1216c501f147fc07e"
   integrity sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==
+
+koa-body-parser@^1.1.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/koa-body-parser/-/koa-body-parser-1.1.2.tgz#6698bf9cfb33b993f801a8af49a85467c402fc64"
+  integrity sha1-Zpi/nPszuZP4AaivSahUZ8QC/GQ=
+  dependencies:
+    co-body "^2.0.0"
 
 "koa-compose@>=3.0.0 <4.0.0", koa-compose@^3.0.0:
   version "3.2.1"
@@ -7009,6 +7039,11 @@ pupa@^2.0.1:
   dependencies:
     escape-goat "^2.0.0"
 
+qs@~2.4.1:
+  version "2.4.2"
+  resolved "https://registry.yarnpkg.com/qs/-/qs-2.4.2.tgz#f7ce788e5777df0b5010da7f7c4e73ba32470f5a"
+  integrity sha1-9854jld33wtQENp/fE5zujJHD1o=
+
 qs@~6.5.2:
   version "6.5.2"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.5.2.tgz#cb3ae806e8740444584ef154ce8ee98d403f3e36"
@@ -7073,6 +7108,14 @@ raw-body@2.4.1:
     http-errors "1.7.3"
     iconv-lite "0.4.24"
     unpipe "1.0.0"
+
+raw-body@~1.3.4:
+  version "1.3.4"
+  resolved "https://registry.yarnpkg.com/raw-body/-/raw-body-1.3.4.tgz#ccc7ddfc46b72861cdd5bb433c840b70b6f27f54"
+  integrity sha1-zMfd/Ea3KGHN1btDPIQLcLbyf1Q=
+  dependencies:
+    bytes "1.0.0"
+    iconv-lite "0.4.8"
 
 rc@^1.2.8:
   version "1.2.8"
@@ -8399,6 +8442,13 @@ typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha1-hnrHTjhkGHsdPUfZlqeOxciDB3c=
+
+uid@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/uid/-/uid-2.0.0.tgz#1773bec106e96955f1658f20272e2ccea414e8bc"
+  integrity sha512-hFw+zKBA1szYdbZWj6FjTxZzJnKNf+wTDcsxlJaXS64MCy9LQEmJUVieGYHCKek/WRyFIcs0cEXtGIQmfvHe2A==
+  dependencies:
+    "@lukeed/csprng" "^1.0.0"
 
 unbox-primitive@^1.0.0:
   version "1.0.1"
