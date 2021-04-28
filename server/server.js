@@ -8,11 +8,13 @@ import next from "next";
 import Router from "koa-router";
 import bodyParser from "koa-body-parser";
 import { uid } from "uid";
+import _ from "lodash";
 
 dotenv.config();
-const lockMetafieldKeyPrefix = "lock";
-const lockDetailsMetafieldKeyPrefix = "info";
-const metafieldNamespace = "umb";
+const ASSET_KEY_PREFIX = "unlock-member-benefits";
+const LOCK_METAFIELD_PREFIX = "lock";
+const LOCKDETAILS_METAFIELD_PREFIX = "info";
+const METAFIELD_NAMESPACE = "umb";
 const {
   NODE_ENV,
   SHOPIFY_API_SECRET,
@@ -44,10 +46,12 @@ Shopify.Context.initialize({
 const ACTIVE_SHOPIFY_SHOPS = {};
 
 const getAssetKey = (metafieldId) =>
-  `assets/unlock-member-benefits-${metafieldId}.js`;
+  `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
 
 // TODO: If discount_code cookie is present, hide elements with class .hide-after-unlocked
+// Also, show .unlocked and hide .locked .unlock-content
 // FIXME: make sure window.unlockProtocol.loadCheckoutModal() is called, so that it doesn't require another click on the button
+// Currently using setTimeout as workaround for above issue
 const getUnlockJavaScript = (discountCode) => {
   return `if(!window.showUnlockPaywall) {
   window.showUnlockPaywall = function(config) {
@@ -58,7 +62,9 @@ const getUnlockJavaScript = (discountCode) => {
       sc.parentNode.insertBefore(js, sc);
     }(document, "script"));}
     window.unlockProtocolConfig = config;
-    window.unlockProtocol && window.unlockProtocol.loadCheckoutModal();
+    setTimeout(function() {
+      window.unlockProtocol && window.unlockProtocol.loadCheckoutModal()
+    }, 500);
   }
 }
 
@@ -84,6 +90,9 @@ window.addEventListener('unlockProtocol.status', function(event) {
     console.log("Currently active discount", codeCookieValue);
     if(codeCookieValue === '${discountCode}'){
       console.log("Discount already applied.");
+      document.querySelectorAll('.hide-after-unlocked').forEach((element) => {
+        element.style.display = "none";
+      });
 
       return;
     } else {
@@ -108,6 +117,18 @@ window.addEventListener('unlockProtocol.transactionSent', function(event) {
   // event.detail.hash includes the hash of the transaction sent
   console.log('unlockProtocol.transactionSent', event);
 })`;
+};
+
+// Throttled API Request
+const deleteAsset = async (client, key) => {
+  try {
+    await client.delete({
+      path: `assets`,
+      query: { "asset[key]": key },
+    });
+  } catch (err) {
+    console.log("Error trying to delete assets", err);
+  }
 };
 
 app.prepare().then(async () => {
@@ -199,11 +220,11 @@ app.prepare().then(async () => {
           metafieldsRes.body.metafields
         );
         const locks = metafieldsRes.body.metafields
-          .filter((i) => i.key.indexOf(lockMetafieldKeyPrefix) === 0)
+          .filter((i) => i.key.indexOf(LOCK_METAFIELD_PREFIX) === 0)
           .map(({ id, value }) => {
             // Add details to locks if available
             const detailsMetafield = metafieldsRes.body.metafields.find(
-              (i) => i.key === lockDetailsMetafieldKeyPrefix + id
+              (i) => i.key === LOCKDETAILS_METAFIELD_PREFIX + id
             );
             if (detailsMetafield) {
               const details = JSON.parse(detailsMetafield.value);
@@ -288,15 +309,15 @@ app.prepare().then(async () => {
         const { lockAddr } = payload;
         console.log("addLock got lockAddr", lockAddr);
 
-        const lockMetafieldKey = `${lockMetafieldKeyPrefix}${uid(
-          30 - lockMetafieldKeyPrefix.length
+        const lockMetafieldKey = `${LOCK_METAFIELD_PREFIX}${uid(
+          30 - LOCK_METAFIELD_PREFIX.length
         )}`;
 
         const metafieldRes = await client.post({
           path: "metafields",
           data: {
             metafield: {
-              namespace: metafieldNamespace,
+              namespace: METAFIELD_NAMESPACE,
               key: lockMetafieldKey,
               value: lockAddr,
               value_type: "string",
@@ -342,7 +363,7 @@ app.prepare().then(async () => {
         }
         const { metafieldId } = payload;
         console.log("removeLock got metafieldId", metafieldId);
-        const lockDetailsKey = `${lockDetailsMetafieldKeyPrefix}${metafieldId}`;
+        const lockDetailsKey = `${LOCKDETAILS_METAFIELD_PREFIX}${metafieldId}`;
         const detailsMetafieldRes = await client.get({
           path: "metafields",
           query: { key: lockDetailsKey },
@@ -434,7 +455,7 @@ app.prepare().then(async () => {
         discountId,
       } = payload;
 
-      const lockDetailsKey = `${lockDetailsMetafieldKeyPrefix}${metafieldId}`;
+      const lockDetailsKey = `${LOCKDETAILS_METAFIELD_PREFIX}${metafieldId}`;
       console.log("lockDetailsKey", lockDetailsKey);
 
       // Each lock must create the JS asset for the scriptTag src
@@ -533,7 +554,7 @@ app.prepare().then(async () => {
           path: `metafields/${lockDetailsMetafieldId}`,
           data: {
             metafield: {
-              namespace: metafieldNamespace,
+              namespace: METAFIELD_NAMESPACE,
               key: lockDetailsKey,
               value: JSON.stringify({
                 address,
@@ -555,7 +576,7 @@ app.prepare().then(async () => {
           path: "metafields",
           data: {
             metafield: {
-              namespace: metafieldNamespace,
+              namespace: METAFIELD_NAMESPACE,
               key: lockDetailsKey,
               value: JSON.stringify({
                 address,
@@ -613,7 +634,7 @@ app.prepare().then(async () => {
         });
         const { metafields } = metafieldsRes.body;
         console.log("Deleting metafields", metafields);
-        metafields.map(async ({ id, value }) => {
+        metafields.map(async ({ id }) => {
           try {
             await client.delete({
               path: `metafields/${id}`,
@@ -626,16 +647,13 @@ app.prepare().then(async () => {
         const assetsRes = await client.get({
           path: "assets",
         });
-        const { assets } = assetsRes.body;
-        console.log("Deleting assets", assets);
-        assets.map(async ({ id }) => {
-          try {
-            await client.delete({
-              path: `assets/${id}`,
-            });
-          } catch (err) {
-            console.log("Error trying to delete assets", err);
-          }
+        const appAssets = assetsRes.body.assets.filter(
+          ({ key }) => key.indexOf(`assets/${ASSET_KEY_PREFIX}`) === 0
+        );
+        console.log("Deleting assets", appAssets);
+        appAssets.map(async ({ key }) => {
+          // Throttling due to Shopify API Request Limit of 2 per seconds
+          _.throttle(deleteAsset, 500)(client, key);
         });
 
         ctx.body = {
