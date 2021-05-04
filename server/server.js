@@ -48,20 +48,43 @@ const ACTIVE_SHOPIFY_SHOPS = {};
 const getAssetKey = (metafieldId) =>
   `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
 
-// TODO: If discount_code cookie is present, hide elements with class .hide-after-unlocked
-// Also, show .unlocked and hide .locked .unlock-content
 // FIXME: make sure window.unlockProtocol.loadCheckoutModal() is called, so that it doesn't require another click on the button
 // Currently using setTimeout as workaround for above issue
 const getUnlockJavaScript = (discountCode) => {
-  return `if(!window.showUnlockPaywall) {
+  return `var getMembershipDiscountCodeFromCookie = getMembershipDiscountCodeFromCookie || function() {
+  var value = "; " + document.cookie;
+  var parts = value.split('; discount_code=');
+  if (parts.length == 2) return parts.pop().split(";").shift();
+};
+var activeDiscountCode = activeDiscountCode || getMembershipDiscountCodeFromCookie();
+var hasActiveMembership = activeDiscountCode === '${discountCode}';
+if(hasActiveMembership) {
+  document.querySelector('.hide-after-unlocked').style.display = "none";
+  document.querySelectorAll('.unlock-content.locked').forEach((element) => {
+    element.style.display = "none";
+  })
+  document.querySelectorAll('.unlock-content.unlocked').forEach((element) => {
+    element.style.display = "block";
+  })
+} else {
+  document.querySelectorAll('.unlock-content.locked').forEach((element) => {
+    element.style.display = "block";
+  })
+}
+
+if(!window.showUnlockPaywall) {
   window.showUnlockPaywall = function(config) {
-    if(!window.unlockProtocol){(function(d, s) {
-      var js = d.createElement(s),
-      sc = d.getElementsByTagName(s)[0];
-      js.src = "https://paywall.unlock-protocol.com/static/unlock.latest.min.js";
-      sc.parentNode.insertBefore(js, sc);
-    }(document, "script"));}
     window.unlockProtocolConfig = config;
+
+    if(!window.unlockProtocol){
+      (function(d, s) {
+        var js = d.createElement(s),
+        sc = d.getElementsByTagName(s)[0];
+        js.src = "https://paywall.unlock-protocol.com/static/unlock.latest.min.js";
+        sc.parentNode.insertBefore(js, sc);
+      }(document, "script"));
+    }
+
     setTimeout(function() {
       window.unlockProtocol && window.unlockProtocol.loadCheckoutModal()
     }, 500);
@@ -70,7 +93,7 @@ const getUnlockJavaScript = (discountCode) => {
 
 window.addEventListener('unlockProtocol.status', function(event) {
   var unlockState = event.detail.state.toString();
-  console.log('unlockProtocol.status', event, unlockState);
+  console.log('unlockProtocol.status event.detail', event.detail);
 
   // We hide all .unlock-content elements
   document.querySelector('.unlock-content').style.display = "none"
@@ -80,15 +103,9 @@ window.addEventListener('unlockProtocol.status', function(event) {
   })
 
   // If a discount has already been applied, don't redirect
-  var getCookie = function(name) {
-    var value = "; " + document.cookie;
-    var parts = value.split('; '+name+'=');
-    if (parts.length == 2) return parts.pop().split(";").shift();
-  };
-  codeCookieValue = getCookie('discount_code');
-  if(codeCookieValue){
-    console.log("Currently active discount", codeCookieValue);
-    if(codeCookieValue === '${discountCode}'){
+  if(activeDiscountCode){
+    console.log("Currently active discount", activeDiscountCode);
+    if(hasActiveMembership){
       console.log("Discount already applied.");
       document.querySelectorAll('.hide-after-unlocked').forEach((element) => {
         element.style.display = "none";
@@ -110,12 +127,12 @@ window.addEventListener('unlockProtocol.status', function(event) {
 
 window.addEventListener('unlockProtocol.authenticated', function(event) {
   // event.detail.addresss includes the address of the current user, when known
-  console.log('unlockProtocol.authenticated', event);
+  console.log('unlockProtocol.authenticated', event.detail);
 })
 
 window.addEventListener('unlockProtocol.transactionSent', function(event) {
   // event.detail.hash includes the hash of the transaction sent
-  console.log('unlockProtocol.transactionSent', event);
+  console.log('unlockProtocol.transactionSent', event.detail);
 })`;
 };
 
