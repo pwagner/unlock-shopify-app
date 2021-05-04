@@ -402,9 +402,9 @@ const LockNetworkSelect = ({ name, defaultValue }) => {
   const [selected, setSelected] = useState(defaultValue);
   const handleSelectChange = useCallback((value) => setSelected(value), []);
   const options = [
-    { label: "xDai", value: 100 },
-    { label: "Ethereum", value: 1 },
-    { label: "Rinkeby", value: 4 },
+    { label: "xDai", value: "100" },
+    { label: "Ethereum", value: "1" },
+    { label: "Rinkeby", value: "4" },
   ];
 
   return (
