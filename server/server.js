@@ -22,6 +22,7 @@ const {
   SCOPES,
   HOST,
   PORT,
+  SHOP,
 } = process.env;
 const port = parseInt(PORT, 10) || 8081;
 const dev = NODE_ENV !== "production";
@@ -86,7 +87,8 @@ if(!window.showUnlockPaywall) {
     }
 
     setTimeout(function() {
-      window.unlockProtocol && window.unlockProtocol.loadCheckoutModal()
+      console.log('config', config);
+      window.unlockProtocol && window.unlockProtocol.loadCheckoutModal(config)
     }, 500);
   }
 }
