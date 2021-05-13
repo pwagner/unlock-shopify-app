@@ -42,10 +42,10 @@ class Index extends React.Component {
         <TitleBar title="Settings" />
         <Layout>
           <Layout.AnnotatedSection
-            title="Setup Locks"
-            description="Add locks to your shop, and reward key holders with discounts."
+            title="Setup Memperships"
+            description="Add memberships to your shop, and reward members with discounts."
           >
-            <Card title="Add Lock" sectioned>
+            <Card title="Add Membership" sectioned>
               <Form onSubmit={this.handleContinue}>
                 <FormLayout>
                   {this.state.newLockAddrError && (
@@ -97,7 +97,7 @@ class Index extends React.Component {
               return (
                 <Card key={`card-${index}`} sectioned>
                   <div style={{ float: "left" }}>
-                    <h2 className="Polaris-Heading">Lock #{index + 1}</h2>
+                    <h2 className="Polaris-Heading">Membership #{index + 1}</h2>
                   </div>
                   <Stack distribution="trailing">
                     <Button
