@@ -49,8 +49,6 @@ const ACTIVE_SHOPIFY_SHOPS = {};
 const getAssetKey = (metafieldId) =>
   `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
 
-// FIXME: make sure window.unlockProtocol.loadCheckoutModal() is called, so that it doesn't require another click on the button
-// Currently using setTimeout as workaround for above issue
 const getUnlockJavaScript = (discountCode) => {
   return `var getMembershipDiscountCodeFromCookie = getMembershipDiscountCodeFromCookie || function() {
   var value = "; " + document.cookie;
@@ -60,7 +58,9 @@ const getUnlockJavaScript = (discountCode) => {
 var activeDiscountCode = activeDiscountCode || getMembershipDiscountCodeFromCookie();
 var hasActiveMembership = activeDiscountCode === '${discountCode}';
 if(hasActiveMembership) {
-  document.querySelector('.hide-after-unlocked').style.display = "none";
+  document.querySelectorAll('.hide-after-unlocked').forEach((element) => {
+    element.style.display = "none";
+  })
   document.querySelectorAll('.unlock-content.locked').forEach((element) => {
     element.style.display = "none";
   })
@@ -76,7 +76,6 @@ if(hasActiveMembership) {
 if(!window.showUnlockPaywall) {
   window.showUnlockPaywall = function(config) {
     window.unlockProtocolConfig = config;
-
     if(!window.unlockProtocol){
       (function(d, s) {
         var js = d.createElement(s),
@@ -85,11 +84,7 @@ if(!window.showUnlockPaywall) {
         sc.parentNode.insertBefore(js, sc);
       }(document, "script"));
     }
-
-    setTimeout(function() {
-      console.log('config', config);
-      window.unlockProtocol && window.unlockProtocol.loadCheckoutModal(config)
-    }, 500);
+    setTimeout(() => window.unlockProtocol && window.unlockProtocol.loadCheckoutModal(config), 500);
   }
 }
 
@@ -116,13 +111,13 @@ window.addEventListener('unlockProtocol.status', function(event) {
       return;
     } else {
       console.log("Other discount already applied.");
-      // TODO: overrides?
 
       return;
     }
   } else if(unlockState === 'unlocked') {
     var redirectUrl = 'https://${SHOP}/discount/${discountCode}?redirect=' + window.location.pathname;
-    console.log('Welcome! Unlocked member benefit ${discountCode} - redirecting to ', redirectUrl);
+    console.log('Welcome member! Unlocked benefit ${discountCode}');
+    console.log('Redirecting to', redirectUrl);
     window.location.replace(redirectUrl);
   }
 })
