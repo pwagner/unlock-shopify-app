@@ -81,7 +81,7 @@ class Index extends React.Component {
               <TextStyle variation="subdued">
                 <Heading>No Lock?</Heading>
                 <p>
-                  You can create your own locks in the
+                  You can create your own locks in the{" "}
                   <a
                     href="https://app.unlock-protocol.com/dashboard"
                     target="_blank"
@@ -151,24 +151,29 @@ class Index extends React.Component {
                       />
 
                       <p>
-                        Add the following attribute to any HTML tag to turn it
-                        into an unlock button for this lock:
+                        <b>Note:</b> You can add the following attribute to any
+                        HTML tag in your theme's code to turn it into an unlock
+                        button for this lock. It uses the Unlock Paywall and
+                        contains the paywall configuration for this lock.
                       </p>
-                      <pre>{`onclick='window.showUnlockPaywall(${JSON.stringify(
-                        {
-                          network: parseInt(value.networkId),
-                          locks: {
-                            [value.address]: {
-                              name: value.name,
+                      <input
+                        disabled
+                        value={`onclick='window.showUnlockPaywall(${JSON.stringify(
+                          {
+                            network: parseInt(value.networkId),
+                            locks: {
+                              [value.address]: {
+                                name: value.name,
+                              },
                             },
-                          },
-                          icon:
-                            "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
-                          callToAction: {
-                            default: value.cta,
-                          },
-                        }
-                      )})'`}</pre>
+                            icon:
+                              "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
+                            callToAction: {
+                              default: value.cta,
+                            },
+                          }
+                        )})'`}
+                      />
 
                       <Stack distribution="trailing">
                         <Button primary submit>
@@ -187,12 +192,21 @@ class Index extends React.Component {
               title="Publish Member Benefits"
               description="Show your customers what benefits await them, if they get a membership."
             >
-              <Card title="Unlock Button" sectioned>
-                Example code for Lock #1 (i.e. in your theme's{" "}
-                <b>index.liquid</b>):
+              <Card title="Add Theme Section (recommended)" sectioned>
+                You can use the <b>theme sections</b> starting with{" "}
+                <em>Member Benefit -</em> in the{" "}
+                <a href="/admin/themes">Theme Editor</a>. You can add sections
+                to your theme under Online Store > Themes > Customize.
+              </Card>
+              <Card title="Custom Unlock Button" sectioned>
+                Optionally, you can edit your theme's code and integrate custom
+                unlock buttons. Find the appropriate theme file under Online
+                Store > Themes > Actions > Edit code. Here's an example that you
+                could for example use in your theme's <b>index.liquid</b>:
                 <TextField
                   multiline={2}
-                  value={`<style>
+                  value={
+                    `<style>
 .unlock-demo {
   text-align: center;
 }
@@ -211,27 +225,36 @@ class Index extends React.Component {
 </style>
 
 <div class="unlock-demo">
-  <h1>Unlock Member Benefits - Demo Membership</h1>
+  <h1>Member Benefits</h1>
 
   <p class="unlock-content locked">
-    You don't seem to have a key for this lock 🔒<br/>
+    You don't seem to have a memberhsip 🔒<br/>
     Get a key to become a member instantly 🔑
   </p>
 
   <p class="unlock-content unlocked">
     Welcome, dear member! 🎉<br/>
-    You've unlocked <b>free shipping</b> 🎁
+    You've unlocked <b>your benefit</b> 🎁
   </p>
 
   <div class="hide-after-unlocked">
-    <h2>Free Shipping for Members!</h2>
-    <button class="button" onclick='window.showUnlockPaywall({"network":${this.state.locks[0].networkId},"locks":{"${this.state.locks[0].address}":{"name":"${this.state.locks[0].name}"}},"icon":"https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg","callToAction":{"default":"${this.state.locks[0].cta}"}})'>
-        Unlock Member Benefit
-    </button>
+` +
+                    this.state.locks
+                      .map(
+                        (lock, key) => `
+<h2>${this.state.locks[key].name}</h2>
+<button class="button" onclick='window.showUnlockPaywall({"network":${this.state.locks[key].networkId},"locks":{"${this.state.locks[key].address}":{"name":"${this.state.locks[key].name}"}},"icon":"https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg","callToAction":{"default":"${this.state.locks[key].cta}"}})'>
+  ${this.state.locks[key].cta}
+</button>
+`
+                      )
+                      .join("<hr/>") +
+                    `    
   </div>
 
 </div>
-                    `}
+                    `
+                  }
                 />
               </Card>
               <Card title="CSS Classes" sectioned>
