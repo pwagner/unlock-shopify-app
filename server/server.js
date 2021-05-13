@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import "@babel/polyfill";
 import dotenv from "dotenv";
 import "isomorphic-fetch";
@@ -48,6 +49,38 @@ const ACTIVE_SHOPIFY_SHOPS = {};
 
 const getAssetKey = (metafieldId) =>
   `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
+
+// Get content of theme section liquid file
+const getTemplateCode = (sectionName, address, networkId, name, cta) => {
+  const fileContent = fs.readFileSync(
+    `${__dirname}/shopify-theme-templates/${sectionName.replace(
+      /\-0x[A-Fa-f0-9]+\.liquid/,
+      ".liquid"
+    )}`,
+    { encoding: "utf8", flag: "r" }
+  );
+  const uploadContent = fileContent
+    .replace(/__MEMBERSHIP_NAME__/g, name)
+    .replace(
+      /__MEMBERSHIP_CONFIG__/g,
+      JSON.stringify({
+        network: parseInt(networkId),
+        locks: {
+          [address]: {
+            name,
+          },
+        },
+        icon:
+          "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
+        callToAction: {
+          default: cta,
+        },
+      })
+    );
+  console.log("getTemplateCode uploadContent", uploadContent);
+
+  return uploadContent;
+};
 
 const getUnlockJavaScript = (discountCode) => {
   return `var getMembershipDiscountCodeFromCookie = getMembershipDiscountCodeFromCookie || function() {
@@ -438,17 +471,12 @@ app.prepare().then(async () => {
   );
 
   // Save the details of a lock in another metafield, which has keys of pattern: 'info' + lockMetafieldId
-  // The content of this metafield is later exposed to the public via liquid variables in the scriptTag
+  // The content of this metafield is later exposed to the public via liquid variables in the scriptTag, theme section, or custom code snippets.
   router.post(
     "/api/saveLock",
     verifyRequest({ returnHeader: true }),
     async (ctx) => {
-      let lockDetails,
-        scriptTagId,
-        assetId,
-        oldAssetId,
-        lockDetailsMetafieldId,
-        scriptTagSrc;
+      let lockDetails, scriptTagId, lockDetailsMetafieldId, scriptTagSrc;
       const session = await Shopify.Utils.loadCurrentSession(ctx.req, ctx.res);
       const client = new Shopify.Clients.Rest(
         session.shop,
@@ -472,7 +500,46 @@ app.prepare().then(async () => {
       const lockDetailsKey = `${LOCKDETAILS_METAFIELD_PREFIX}${metafieldId}`;
       console.log("lockDetailsKey", lockDetailsKey);
 
-      // Each lock must create the JS asset for the scriptTag src
+      // Lock must create theme section assets
+      try {
+        //const sectionName = `member-benefits-hero-${address}.liquid`;
+        const sectionName = `member-benefits-hero-0x2.liquid`;
+        const assetsRes = await client.put({
+          path: "assets",
+          data: {
+            asset: {
+              key: `sections/${sectionName}`,
+              value: getTemplateCode(
+                sectionName,
+                address,
+                networkId,
+                name,
+                cta
+              ),
+            },
+          },
+          type: "application/json",
+        });
+        if (!assetsRes.body.asset) {
+          console.log("Invalid put assetsRes", sectionName, assetsRes);
+          throw "Missing asset.public_url";
+        }
+        console.log(
+          "New assetsRes.body.asset",
+          sectionName,
+          assetsRes.body.asset
+        );
+      } catch (err) {
+        console.log("Error trying to save theme section in addLock", err);
+        ctx.body = {
+          status: "error",
+          errors: "Could not create theme section for lock.",
+        };
+
+        return;
+      }
+
+      // Lock must create the JS assets for the scriptTag src
       const assetKey = getAssetKey(metafieldId);
       try {
         const assetsRes = await client.get({

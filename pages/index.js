@@ -193,16 +193,24 @@ class Index extends React.Component {
               description="Show your customers what benefits await them, if they get a membership."
             >
               <Card title="Add Theme Section (recommended)" sectioned>
-                You can use the <b>theme sections</b> starting with{" "}
-                <em>Member Benefit -</em> in the{" "}
-                <a href="/admin/themes">Theme Editor</a>. You can add sections
-                to your theme under Online Store > Themes > Customize.
+                <p>
+                  You can use the <b>theme sections</b> starting with{" "}
+                  <em>MB -</em> in the <a href="/admin/themes">Theme Editor</a>.{" "}
+                  <br />
+                  You can add sections to your theme under Online Store > Themes
+                  > Customize. <br />
+                  You'll find the "MB -" sections in the <b>Promotional</b>{" "}
+                  category.
+                </p>
               </Card>
               <Card title="Custom Unlock Button" sectioned>
-                Optionally, you can edit your theme's code and integrate custom
-                unlock buttons. Find the appropriate theme file under Online
-                Store > Themes > Actions > Edit code. Here's an example that you
-                could for example use in your theme's <b>index.liquid</b>:
+                <p>
+                  Optionally, you can edit your theme's code and integrate
+                  custom unlock buttons. Find the appropriate theme file under
+                  Online Store > Themes > Actions > Edit code. Here's an example
+                  that you could for example use in your theme's{" "}
+                  <b>index.liquid</b>:
+                </p>
                 <TextField
                   multiline={2}
                   value={
@@ -238,6 +246,7 @@ class Index extends React.Component {
   </p>
 
   <div class="hide-after-unlocked">
+    <hr/>
 ` +
                     this.state.locks
                       .map(
@@ -249,7 +258,8 @@ class Index extends React.Component {
 `
                       )
                       .join("<hr/>") +
-                    `    
+                    `
+    <hr/>
   </div>
 
 </div>
