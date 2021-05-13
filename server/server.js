@@ -502,8 +502,7 @@ app.prepare().then(async () => {
 
       // Lock must create theme section assets
       try {
-        //const sectionName = `member-benefits-hero-${address}.liquid`;
-        const sectionName = `member-benefits-hero-0x2.liquid`;
+        const sectionName = `member-benefits-hero-${address}.liquid`;
         const assetsRes = await client.put({
           path: "assets",
           data: {
