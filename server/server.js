@@ -415,12 +415,8 @@ app.prepare().then(async () => {
           path: "metafields",
           query: { key: lockDetailsKey },
         });
-        const { id, value } = detailsMetafieldRes.body.metafields[0];
-        console.log(
-          "About to be delete lock address and details metafields",
-          metafieldId,
-          id
-        );
+
+        console.log("About to delete lock address", metafieldId);
 
         // Delete lock metafield
         try {
@@ -431,24 +427,31 @@ app.prepare().then(async () => {
           console.log("Error trying to delete lock metafield", err);
         }
 
-        // Delete details metafield
-        try {
-          await client.delete({
-            path: `metafields/${id}`,
-          });
-        } catch (err) {
-          console.log("Error trying to delete details metafield", err);
-        }
+        if (detailsMetafieldRes.body.metafields.lenth > 0) {
+          const { id, value } = detailsMetafieldRes.body.metafields[0];
+          console.log("About to delete details metafield and script tag", id);
 
-        // Delete script tag
-        const lockDetails = JSON.parse(value);
-        const { scriptTagId } = lockDetails;
-        try {
-          await client.delete({
-            path: `script_tags/${scriptTagId}`,
-          });
-        } catch (err) {
-          console.log("Error trying to delete scriptTag", err);
+          // Delete details metafield
+          try {
+            await client.delete({
+              path: `metafields/${id}`,
+            });
+          } catch (err) {
+            console.log("Error trying to delete details metafield", err);
+          }
+
+          // Delete script tag
+          const lockDetails = JSON.parse(value);
+          const { scriptTagId } = lockDetails;
+          if (scriptTagId) {
+            try {
+              await client.delete({
+                path: `script_tags/${scriptTagId}`,
+              });
+            } catch (err) {
+              console.log("Error trying to delete scriptTag", err);
+            }
+          }
         }
 
         // Delete script asset
