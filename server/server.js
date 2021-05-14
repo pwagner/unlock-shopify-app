@@ -62,9 +62,14 @@ Shopify.Context.initialize({
   ),
 });
 
-// Storing the currently active shops in memory will force them to re-login when your server restarts. You should
-// persist this object in your app.
-const ACTIVE_SHOPIFY_SHOPS = {};
+const loadActiveShopsFromStorage = async () => {
+  const activeShopsFromStorage = await sessionStorage.getAsync(
+    "ACTIVE_SHOPIFY_SHOPS"
+  );
+  const activeShops = JSON.parse(activeShopsFromStorage);
+
+  return activeShops || {};
+};
 
 const getAssetKey = (metafieldId) =>
   `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
@@ -197,6 +202,8 @@ const deleteAsset = async (client, key) => {
   }
 };
 
+const ACTIVE_SHOPIFY_SHOPS = loadActiveShopsFromStorage();
+
 app.prepare().then(async () => {
   const server = new Koa();
   server.use(bodyParser());
@@ -207,14 +214,23 @@ app.prepare().then(async () => {
       async afterAuth(ctx) {
         const { shop, accessToken, scope } = ctx.state.shopify;
         ACTIVE_SHOPIFY_SHOPS[shop] = scope;
+        sessionStorage.setAsync(
+          "ACTIVE_SHOPIFY_SHOPS",
+          JSON.stringify(ACTIVE_SHOPIFY_SHOPS)
+        );
 
         const response = await Shopify.Webhooks.Registry.register({
           shop,
           accessToken,
           path: "/webhooks",
           topic: "APP_UNINSTALLED",
-          webhookHandler: async (topic, shop, body) =>
-            delete ACTIVE_SHOPIFY_SHOPS[shop],
+          webhookHandler: async (topic, shop, body) => {
+            delete ACTIVE_SHOPIFY_SHOPS[shop];
+            sessionStorage.setAsync(
+              "ACTIVE_SHOPIFY_SHOPS",
+              JSON.stringify(ACTIVE_SHOPIFY_SHOPS)
+            );
+          },
         });
 
         if (!response.success) {
