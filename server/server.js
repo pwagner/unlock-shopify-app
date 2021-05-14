@@ -87,7 +87,7 @@ const getTemplateCode = (
 ) => {
   const fileContent = fs.readFileSync(
     `${__dirname}/shopify-theme-templates/${sectionName.replace(
-      /\-0x[A-Fa-f0-9]+\.liquid/,
+      /\-[0-9]+\.liquid/,
       ".liquid"
     )}`,
     { encoding: "utf8", flag: "r" }
