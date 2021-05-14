@@ -75,7 +75,14 @@ const getAssetKey = (metafieldId) =>
   `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
 
 // Get content of theme section liquid file
-const getTemplateCode = (sectionName, address, networkId, name, cta) => {
+const getTemplateCode = (
+  membershipNumber,
+  sectionName,
+  address,
+  networkId,
+  name,
+  cta
+) => {
   const fileContent = fs.readFileSync(
     `${__dirname}/shopify-theme-templates/${sectionName.replace(
       /\-0x[A-Fa-f0-9]+\.liquid/,
@@ -84,7 +91,7 @@ const getTemplateCode = (sectionName, address, networkId, name, cta) => {
     { encoding: "utf8", flag: "r" }
   );
   const uploadContent = fileContent
-    .replace(/__MEMBERSHIP_NAME__/g, name)
+    .replace(/__MEMBERSHIP_NAME__/g, `#${membershipNumber}`)
     .replace(
       /__MEMBERSHIP_CONFIG__/g,
       JSON.stringify({
@@ -107,87 +114,16 @@ const getTemplateCode = (sectionName, address, networkId, name, cta) => {
 };
 
 const getUnlockJavaScript = (discountCode) => {
-  return `var getMembershipDiscountCodeFromCookie = getMembershipDiscountCodeFromCookie || function() {
-  var value = "; " + document.cookie;
-  var parts = value.split('; discount_code=');
-  if (parts.length == 2) return parts.pop().split(";").shift();
-};
-var activeDiscountCode = activeDiscountCode || getMembershipDiscountCodeFromCookie();
-var hasActiveMembership = activeDiscountCode === '${discountCode}';
-if(hasActiveMembership) {
-  document.querySelectorAll('.hide-after-unlocked').forEach((element) => {
-    element.style.display = "none";
-  })
-  document.querySelectorAll('.unlock-content.locked').forEach((element) => {
-    element.style.display = "none";
-  })
-  document.querySelectorAll('.unlock-content.unlocked').forEach((element) => {
-    element.style.display = "block";
-  })
-} else {
-  document.querySelectorAll('.unlock-content.locked').forEach((element) => {
-    element.style.display = "block";
-  })
-}
+  const fileContent = fs.readFileSync(
+    `${__dirname}/shopify-theme-templates/unlock-paywall-modals.js`,
+    { encoding: "utf8", flag: "r" }
+  );
+  const uploadContent = fileContent
+    .replace(/__SHOP__/g, SHOP)
+    .replace(/__DISCOUNT_CODE__/g, discountCode);
+  console.log("getUnlockJavaScript uploadContent", uploadContent);
 
-if(!window.showUnlockPaywall) {
-  window.showUnlockPaywall = function(config) {
-    window.unlockProtocolConfig = config;
-    if(!window.unlockProtocol){
-      (function(d, s) {
-        var js = d.createElement(s),
-        sc = d.getElementsByTagName(s)[0];
-        js.src = "https://paywall.unlock-protocol.com/static/unlock.latest.min.js";
-        sc.parentNode.insertBefore(js, sc);
-      }(document, "script"));
-    }
-    setTimeout(() => window.unlockProtocol && window.unlockProtocol.loadCheckoutModal(config), 500);
-  }
-}
-
-window.addEventListener('unlockProtocol.status', function(event) {
-  var unlockState = event.detail.state.toString();
-  console.log('unlockProtocol.status event.detail', event.detail);
-
-  // We hide all .unlock-content elements
-  document.querySelector('.unlock-content').style.display = "none"
-  // We show only the relevant element (CSS class: locked|unlocked)
-  document.querySelectorAll('.unlock-content.' + unlockState).forEach((element) => {
-    element.style.display = "block";
-  })
-
-  // If a discount has already been applied, don't redirect
-  if(activeDiscountCode){
-    console.log("Currently active discount", activeDiscountCode);
-    if(hasActiveMembership){
-      console.log("Discount already applied.");
-      document.querySelectorAll('.hide-after-unlocked').forEach((element) => {
-        element.style.display = "none";
-      });
-
-      return;
-    } else {
-      console.log("Other discount already applied.");
-
-      return;
-    }
-  } else if(unlockState === 'unlocked') {
-    var redirectUrl = 'https://${SHOP}/discount/${discountCode}?redirect=' + window.location.pathname;
-    console.log('Welcome member! Unlocked benefit ${discountCode}');
-    console.log('Redirecting to', redirectUrl);
-    window.location.replace(redirectUrl);
-  }
-})
-
-window.addEventListener('unlockProtocol.authenticated', function(event) {
-  // event.detail.addresss includes the address of the current user, when known
-  console.log('unlockProtocol.authenticated', event.detail);
-})
-
-window.addEventListener('unlockProtocol.transactionSent', function(event) {
-  // event.detail.hash includes the hash of the transaction sent
-  console.log('unlockProtocol.transactionSent', event.detail);
-})`;
+  return uploadContent;
 };
 
 // Throttled API Request
@@ -526,6 +462,7 @@ app.prepare().then(async () => {
         throw "address missing in request body";
       }
       const {
+        membershipNumber,
         metafieldId,
         address,
         name,
@@ -547,6 +484,7 @@ app.prepare().then(async () => {
             asset: {
               key: `sections/${sectionName}`,
               value: getTemplateCode(
+                membershipNumber,
                 sectionName,
                 address,
                 networkId,

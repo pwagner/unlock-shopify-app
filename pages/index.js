@@ -114,6 +114,11 @@ class Index extends React.Component {
                     <FormLayout>
                       <input
                         type="hidden"
+                        name="membershipNumber"
+                        value={index + 1}
+                      />
+                      <input
+                        type="hidden"
                         name="metafieldId"
                         value={value.metafieldId}
                       />
@@ -195,8 +200,9 @@ class Index extends React.Component {
               <Card title="Add Theme Section (recommended)" sectioned>
                 <p>
                   You can use the <b>theme sections</b> starting with{" "}
-                  <em>MB -</em> in the <a href="/admin/themes">Theme Editor</a>.{" "}
-                  <br />
+                  <em>MB</em> followed by the lock number (e.g. "MB #1" for the
+                  first membership) in the{" "}
+                  <a href="/admin/themes">Theme Editor</a>. <br />
                   You can add sections to your theme under Online Store > Themes
                   > Customize. <br />
                   You'll find the "MB -" sections in the <b>Promotional</b>{" "}
@@ -362,6 +368,7 @@ class Index extends React.Component {
 
   handleSaveLock = async (e) => {
     try {
+      const membershipNumber = e.target.elements.membershipNumber.value;
       const metafieldId = e.target.elements.metafieldId.value;
       const address = e.target.elements.lockAddress.value;
       const name = e.target.elements.name.value;
@@ -372,6 +379,7 @@ class Index extends React.Component {
       const saveRes = await this.fetchWithAuth("/api/saveLock", {
         method: "POST",
         body: JSON.stringify({
+          membershipNumber,
           address,
           name,
           cta,
