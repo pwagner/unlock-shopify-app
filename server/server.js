@@ -477,7 +477,7 @@ app.prepare().then(async () => {
 
       // Lock must create theme section assets
       try {
-        const sectionName = `mb-hero-${address}.liquid`;
+        const sectionName = `mb-hero-${membershipNumber}.liquid`;
         const assetsRes = await client.put({
           path: "assets",
           data: {
