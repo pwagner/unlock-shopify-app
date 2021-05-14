@@ -11,6 +11,9 @@ import bodyParser from "koa-body-parser";
 import { uid } from "uid";
 import _ from "lodash";
 
+import RedisStore from "./redis-store";
+
+const sessionStorage = new RedisStore();
 dotenv.config();
 const ASSET_KEY_PREFIX = "unlock-member-benefits";
 const LOCK_METAFIELD_PREFIX = "lock";
@@ -39,8 +42,11 @@ Shopify.Context.initialize({
   HOST_NAME: HOST.replace(/https:\/\//, ""),
   API_VERSION: ApiVersion.April21,
   IS_EMBEDDED_APP: true,
-  // This should be replaced with your preferred storage strategy
-  SESSION_STORAGE: new Shopify.Session.MemorySessionStorage(),
+  SESSION_STORAGE: new Shopify.Session.CustomSessionStorage(
+    sessionStorage.storeCallback,
+    sessionStorage.loadCallback,
+    sessionStorage.deleteCallback
+  ),
 });
 
 // Storing the currently active shops in memory will force them to re-login when your server restarts. You should
