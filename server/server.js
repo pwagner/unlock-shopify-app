@@ -13,8 +13,9 @@ import _ from "lodash";
 
 import RedisStore from "./redis-store";
 
-const sessionStorage = new RedisStore();
 dotenv.config();
+const REDIS_PORT = parseInt(process.env.REDIS_PORT) || 6379;
+const sessionStorage = new RedisStore(REDIS_PORT);
 const ASSET_KEY_PREFIX = "unlock-member-benefits";
 const LOCK_METAFIELD_PREFIX = "lock";
 const LOCKDETAILS_METAFIELD_PREFIX = "info";
