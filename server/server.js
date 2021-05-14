@@ -15,6 +15,7 @@ import { parse } from "url";
 import RedisStore from "./redis-store";
 
 dotenv.config();
+// Configure Redis session storage, so that active shops are persisted
 // Heroku RedisToGo sets REDISTOGO_URL env var (https://devcenter.heroku.com/articles/redistogo#using-with-node-js)
 let sessionStorage;
 if (process.env.REDISTOGO_URL) {
@@ -28,6 +29,7 @@ if (process.env.REDISTOGO_URL) {
   );
 }
 
+// These theme assets (in "assets") get deleted on reset (as opposed to theme sections, e.g. membership hero)
 const ASSET_KEY_PREFIX = "unlock-member-benefits";
 const LOCK_METAFIELD_PREFIX = "lock";
 const LOCKDETAILS_METAFIELD_PREFIX = "info";
@@ -113,6 +115,7 @@ const getTemplateCode = (
   return uploadContent;
 };
 
+// Get content for the public JS asset for this member benefit
 const getUnlockJavaScript = (discountCode) => {
   const fileContent = fs.readFileSync(
     `${__dirname}/shopify-theme-templates/unlock-paywall-modals.js`,
