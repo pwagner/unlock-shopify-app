@@ -14,8 +14,10 @@ import _ from "lodash";
 import RedisStore from "./redis-store";
 
 dotenv.config();
-const REDIS_PORT = parseInt(process.env.REDIS_PORT) || 6379;
-const sessionStorage = new RedisStore(REDIS_PORT);
+// Heroku RedisToGo sets REDISTOGO_URL env var
+const redisConfig =
+  process.env.REDISTOGO_URL || parseInt(process.env.REDIS_PORT) || 6379;
+const sessionStorage = new RedisStore(redisConfig);
 const ASSET_KEY_PREFIX = "unlock-member-benefits";
 const LOCK_METAFIELD_PREFIX = "lock";
 const LOCKDETAILS_METAFIELD_PREFIX = "info";
