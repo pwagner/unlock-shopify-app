@@ -3,7 +3,7 @@
 import redis from "redis";
 import { promisify } from "util";
 class RedisStore {
-  constructor(port) {
+  constructor(host, port) {
     /*
           The storeCallback takes in the Session, and sets a stringified version of it on the redis store
           This callback is used for BOTH saving new Sessions and updating existing Sessions.
@@ -55,7 +55,7 @@ class RedisStore {
       }
     };
     // Create a new redis client
-    this.client = redis.createClient(port);
+    this.client = redis.createClient(port, host);
     // Use Node's `promisify` to have redis return a promise from the client methods
     this.getAsync = promisify(this.client.get).bind(this.client);
     this.setAsync = promisify(this.client.set).bind(this.client);

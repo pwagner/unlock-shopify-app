@@ -10,14 +10,24 @@ import Router from "koa-router";
 import bodyParser from "koa-body-parser";
 import { uid } from "uid";
 import _ from "lodash";
+import { parse } from "url";
 
 import RedisStore from "./redis-store";
 
 dotenv.config();
-// Heroku RedisToGo sets REDISTOGO_URL env var
-const redisConfig =
-  process.env.REDISTOGO_URL || parseInt(process.env.REDIS_PORT) || 6379;
-const sessionStorage = new RedisStore(redisConfig);
+// Heroku RedisToGo sets REDISTOGO_URL env var (https://devcenter.heroku.com/articles/redistogo#using-with-node-js)
+let sessionStorage;
+if (process.env.REDISTOGO_URL) {
+  const rtg = parse(process.env.REDISTOGO_URL);
+  sessionStorage = new RedisStore(rtg.hostname, rtg.port);
+  sessionStorage.client.auth(rtg.auth.split(":")[1]);
+} else {
+  sessionStorage = new RedisStore(
+    process.env.REDIS_HOST || "127.0.0.1",
+    parseInt(process.env.REDIS_PORT) || 6379
+  );
+}
+
 const ASSET_KEY_PREFIX = "unlock-member-benefits";
 const LOCK_METAFIELD_PREFIX = "lock";
 const LOCKDETAILS_METAFIELD_PREFIX = "info";
