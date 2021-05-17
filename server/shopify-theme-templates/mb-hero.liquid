@@ -20,7 +20,7 @@
   cursor: pointer !important;
 }
 {%- endstyle -%}
-<div data-section-id="{{ section.id }}" data-section-type="hero-section" onclick='window.showUnlockPaywall(__MEMBERSHIP_CONFIG__)'>
+<div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section" onclick='window.showUnlockPaywall(__MEMBERSHIP_CONFIG__)'>
   {%- if section.settings.hero_layout == 'fixed_width' -%}
     <div class="page-width">
   {%- endif -%}
@@ -676,8 +676,15 @@
         "zh-TW": "文字"
       },
       "default": {
-        "en": "<p>Use overlay text to give your customers insight into your membership.</p>"
+        "en": "<p>Use overlay text to give your customers insight into your membership offering.</p>"
       }
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_hide_unlocked",
+      "label": "Hide hero if status is unlocked",
+      "info": "If enabled, the hero will not be displayed to members.",
+      "default": true
     }
   ],
   "presets": [

@@ -163,7 +163,7 @@ class Index extends React.Component {
     You've unlocked <b>your benefit</b> 🎁
   </p>
 
-  <div class="hide-after-unlocked">
+  <div class="hidden-after-unlocked">
     <hr/>
 ` +
                     this.state.locks
@@ -200,7 +200,7 @@ class Index extends React.Component {
                   Use the following CSS class to{" "}
                   <b>display elements only before the unlock attempt</b>:
                 </p>
-                <pre>class="hide-after-unlocked"</pre>
+                <pre>class="hidden-after-unlocked"</pre>
               </Card>
             </Layout.AnnotatedSection>
           )}
