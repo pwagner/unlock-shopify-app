@@ -77,23 +77,19 @@ const getAssetKey = (metafieldId) =>
   `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
 
 // Get content of theme section liquid file
-const getTemplateCode = (
-  membershipNumber,
-  sectionName,
-  address,
-  networkId,
-  name,
-  cta
-) => {
+const getTemplateCode = (sectionName, address, networkId, name, cta) => {
   const fileContent = fs.readFileSync(
     `${__dirname}/shopify-theme-templates/${sectionName.replace(
-      /\-[0-9]+\.liquid/,
+      /\-[A-Za-z0-9]+\.liquid/,
       ".liquid"
     )}`,
     { encoding: "utf8", flag: "r" }
   );
   const uploadContent = fileContent
-    .replace(/__MEMBERSHIP_NAME__/g, `#${membershipNumber}`)
+    .replace(
+      /__MEMBERSHIP_NAME__/g,
+      `${address.substr(0, 5)}...${address.substr(-3, 3)}`
+    )
     .replace(
       /__MEMBERSHIP_CONFIG__/g,
       JSON.stringify({
@@ -429,9 +425,15 @@ app.prepare().then(async () => {
         }
 
         // Delete script asset
-        const deleteAssetRes = await client.delete({
+        await client.delete({
           path: "assets",
           query: { "asset[key]": getAssetKey(metafieldId) },
+        });
+
+        // Delete theme section template
+        await client.delete({
+          path: "assets",
+          query: { "asset[key]": `sections/mb-hero-${metafieldId}.liquid` },
         });
 
         ctx.body = {
@@ -465,7 +467,6 @@ app.prepare().then(async () => {
         throw "address missing in request body";
       }
       const {
-        membershipNumber,
         metafieldId,
         address,
         name,
@@ -480,14 +481,13 @@ app.prepare().then(async () => {
 
       // Lock must create theme section assets
       try {
-        const sectionName = `mb-hero-${membershipNumber}.liquid`;
+        const sectionName = `mb-hero-${metafieldId}.liquid`;
         const assetsRes = await client.put({
           path: "assets",
           data: {
             asset: {
               key: `sections/${sectionName}`,
               value: getTemplateCode(
-                membershipNumber,
                 sectionName,
                 address,
                 networkId,

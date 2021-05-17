@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React from "react";
 import {
   Page,
   Layout,
@@ -9,13 +9,12 @@ import {
   Button,
   InlineError,
   Card,
-  Select,
-  Checkbox,
   TextStyle,
   Heading,
 } from "@shopify/polaris";
 import { TitleBar, Context } from "@shopify/app-bridge-react";
 import { authenticatedFetch } from "@shopify/app-bridge-utils";
+import MembershipForm from "../components/MembershipForm";
 
 class Index extends React.Component {
   static contextType = Context;
@@ -25,6 +24,7 @@ class Index extends React.Component {
     super(props);
     this.state = {
       locks: [],
+      discounts: [],
       newLockAddr: "",
       newLockAddrError: false,
     };
@@ -50,8 +50,7 @@ class Index extends React.Component {
                 <FormLayout>
                   {this.state.newLockAddrError && (
                     <InlineError
-                      message="Pattern not recognized as valid Ethereum address, please check!"
-                      fieldID="lockAddr"
+                      message={this.state.newLockAddrError}
                       id="lockAddrError"
                     />
                   )}
@@ -93,103 +92,16 @@ class Index extends React.Component {
               </TextStyle>
             </Card>
 
-            {this.state.locks.map((value, index) => {
-              return (
-                <Card key={`card-${index}`} sectioned>
-                  <div style={{ float: "left" }}>
-                    <h2 className="Polaris-Heading">Membership #{index + 1}</h2>
-                  </div>
-                  <Stack distribution="trailing">
-                    <Button
-                      small
-                      onClick={() =>
-                        this.deleteLock(value.address, value.metafieldId)
-                      }
-                    >
-                      X
-                    </Button>
-                  </Stack>
-                  <br />
-                  <Form onSubmit={this.handleSaveLock}>
-                    <FormLayout>
-                      <input
-                        type="hidden"
-                        name="membershipNumber"
-                        value={index + 1}
-                      />
-                      <input
-                        type="hidden"
-                        name="metafieldId"
-                        value={value.metafieldId}
-                      />
-                      <TextField
-                        name="lockAddress"
-                        value={value.address}
-                        disabled
-                      />
-                      <LockNetworkSelect
-                        name="networkId"
-                        defaultValue={value.networkId || 100}
-                      />
-                      <LockBenefitSelect
-                        name="discountId"
-                        discounts={this.state.discounts}
-                        defaultValue={value.discountId || ""}
-                      />
-                      <LockTextField
-                        label="Lock name"
-                        name="name"
-                        helpText="Explain the benefit your customers receive here"
-                        onChange={this.handleTextInput}
-                        defaultValue={value.name || ""}
-                      />
-                      <LockTextField
-                        label="Call to action"
-                        name="cta"
-                        helpText="Enter an engaging label for the join-button here"
-                        onChange={this.handleTextInput}
-                        defaultValue={value.cta || ""}
-                      />
-                      <IsEnabledCheckbox
-                        name="enabled"
-                        checked={value.isEnabled || false}
-                      />
-
-                      <p>
-                        <b>Note:</b> You can add the following attribute to any
-                        HTML tag in your theme's code to turn it into an unlock
-                        button for this lock. It uses the Unlock Paywall and
-                        contains the paywall configuration for this lock.
-                      </p>
-                      <input
-                        disabled
-                        value={`onclick='window.showUnlockPaywall(${JSON.stringify(
-                          {
-                            network: parseInt(value.networkId),
-                            locks: {
-                              [value.address]: {
-                                name: value.name,
-                              },
-                            },
-                            icon:
-                              "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
-                            callToAction: {
-                              default: value.cta,
-                            },
-                          }
-                        )})'`}
-                      />
-
-                      <Stack distribution="trailing">
-                        <Button primary submit>
-                          Save
-                        </Button>
-                      </Stack>
-                    </FormLayout>
-                  </Form>
-                </Card>
-              );
-            })}
+            {this.state.locks.map((value, index) => (
+              <MembershipForm
+                value={value}
+                discounts={this.state.discounts}
+                index={index + 1}
+                key={value.metafieldId}
+                onSave={this.handleSaveLock}
+                onDelete={this.deleteLock}
+              />
+            ))}
           </Layout.AnnotatedSection>
 
           {this.state.locks.length > 0 && (
@@ -200,8 +112,8 @@ class Index extends React.Component {
               <Card title="Add Theme Section (recommended)" sectioned>
                 <p>
                   You can use the <b>theme sections</b> starting with{" "}
-                  <em>MB</em> followed by the lock number (e.g. "MB #1" for the
-                  first membership) in the{" "}
+                  <em>MB</em> followed by the abbreviated lock address (e.g. "MB
+                  0x123...def" for the first membership) in the{" "}
                   <a href="/admin/themes">Theme Editor</a>. <br />
                   You can add sections to your theme under Online Store > Themes
                   > Customize. <br />
@@ -362,13 +274,8 @@ class Index extends React.Component {
     }
   };
 
-  handleTextInput = (e) => {
-    this.setState({ [e.target.name]: [e.target.value] });
-  };
-
   handleSaveLock = async (e) => {
     try {
-      const membershipNumber = e.target.elements.membershipNumber.value;
       const metafieldId = e.target.elements.metafieldId.value;
       const address = e.target.elements.lockAddress.value;
       const name = e.target.elements.name.value;
@@ -379,7 +286,6 @@ class Index extends React.Component {
       const saveRes = await this.fetchWithAuth("/api/saveLock", {
         method: "POST",
         body: JSON.stringify({
-          membershipNumber,
           address,
           name,
           cta,
@@ -426,81 +332,24 @@ class Index extends React.Component {
     }
   };
 
-  validateAddr = (val) => {
-    // TODO: check if lock was already added!
-    this.setState({ newLockAddr: val });
-    if (!/^0x[a-fA-F0-9]{40}$/.test(val)) {
-      console.log("true");
-      this.setState({ newLockAddrError: true });
-    } else {
-      console.log("false");
-      this.setState({ newLockAddrError: false });
+  validateAddr = (addr) => {
+    this.setState({ newLockAddr: addr });
+    if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) {
+      this.setState({
+        newLockAddrError: "Pattern not recognized as valid Ethereum address.",
+      });
+      return;
     }
+
+    const hasLock = this.state.locks.find(({ address }) => address === addr);
+    if (hasLock) {
+      this.setState({ newLockAddrError: "This lock address already exists." });
+      return;
+    }
+
+    console.log("false");
+    this.setState({ newLockAddrError: false });
   };
 }
-
-const LockNetworkSelect = ({ name, defaultValue }) => {
-  const [selected, setSelected] = useState(defaultValue);
-  const handleSelectChange = useCallback((value) => setSelected(value), []);
-  const options = [
-    { label: "xDai", value: "100" },
-    { label: "Ethereum", value: "1" },
-    { label: "Rinkeby", value: "4" },
-  ];
-
-  return (
-    <Select
-      label="Network:"
-      labelInline
-      options={options}
-      onChange={handleSelectChange}
-      value={selected}
-      name={name}
-    />
-  );
-};
-
-const LockBenefitSelect = ({ name, discounts, defaultValue }) => {
-  const [selected, setSelected] = useState(defaultValue);
-  const handleSelectChange = useCallback((value) => setSelected(value), []);
-  const options = [{ label: "-- Select Discount --", value: "" }];
-  discounts.map((code) => {
-    options.push({ label: code, value: code });
-  });
-
-  return (
-    <Select
-      label="Benefit:"
-      labelInline
-      options={options}
-      onChange={handleSelectChange}
-      value={selected}
-      name={name}
-    />
-  );
-};
-
-const LockTextField = (props) => {
-  const [value, setValue] = useState(props.defaultValue);
-  const handleChange = useCallback((newValue) => setValue(newValue), []);
-
-  return <TextField {...props} value={value} onChange={handleChange} />;
-};
-
-const IsEnabledCheckbox = (props) => {
-  const [checked, setChecked] = useState(props.checked);
-  const handleChange = useCallback((newChecked) => setChecked(newChecked), []);
-  const helpText = checked ? "Lock is enabled" : "Lock is disabled";
-
-  return (
-    <Checkbox
-      label="Active"
-      name="enabled"
-      helpText={helpText}
-      checked={checked}
-      onChange={handleChange}
-    />
-  );
-};
 
 export default Index;
