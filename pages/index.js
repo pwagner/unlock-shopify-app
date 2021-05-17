@@ -12,7 +12,7 @@ import {
   TextStyle,
   Heading,
 } from "@shopify/polaris";
-import { TitleBar, Context } from "@shopify/app-bridge-react";
+import { TitleBar, Context, Loading } from "@shopify/app-bridge-react";
 import { authenticatedFetch } from "@shopify/app-bridge-utils";
 import MembershipForm from "../components/MembershipForm";
 
@@ -27,6 +27,7 @@ class Index extends React.Component {
       discounts: [],
       newLockAddr: "",
       newLockAddrError: false,
+      isLoading: false,
     };
   }
 
@@ -100,6 +101,7 @@ class Index extends React.Component {
                 key={value.metafieldId}
                 onSave={this.handleSaveLock}
                 onDelete={this.deleteLock}
+                isLoading={this.state.isLoading}
               />
             ))}
           </Layout.AnnotatedSection>
@@ -121,7 +123,7 @@ class Index extends React.Component {
                   category.
                 </p>
               </Card>
-              <Card title="Custom Unlock Button" sectioned>
+              <Card title="Custom Unlock Buttons" sectioned>
                 <p>
                   Optionally, you can edit your theme's code and integrate
                   custom unlock buttons. Find the appropriate theme file under
@@ -275,6 +277,7 @@ class Index extends React.Component {
   };
 
   handleSaveLock = async (e) => {
+    this.setState({ isLoading: true });
     try {
       const metafieldId = e.target.elements.metafieldId.value;
       const address = e.target.elements.lockAddress.value;
@@ -308,6 +311,7 @@ class Index extends React.Component {
     } catch (err) {
       console.log("Error in handleSaveLock:", err);
     }
+    this.setState({ isLoading: false });
   };
 
   deleteLock = async (lockAddress, metafieldId) => {

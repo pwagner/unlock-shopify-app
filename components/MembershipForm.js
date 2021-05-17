@@ -8,14 +8,31 @@ import {
   Card,
   Select,
   Checkbox,
+  Icon,
+  Collapsible,
+  TextContainer,
 } from "@shopify/polaris";
+import {
+  BuyButtonButtonLayoutMajor,
+  DuplicateMinor,
+} from "@shopify/polaris-icons";
+import copy from "copy-to-clipboard";
 
 const handleTextInput = (e) => {
   this.setState({ [e.target.name]: [e.target.value] });
 };
 
 const MembershipForm = forwardRef(
-  ({ id, value, discounts, index, onSave, onDelete, ...props }, ref) => {
+  (
+    { id, value, discounts, index, onSave, onDelete, isLoading, ...props },
+    ref
+  ) => {
+    const [open, setOpen] = useState(false);
+
+    const handleToggle = useCallback(() => setOpen((open) => !open), []);
+
+    const handleCopy = (e) => copy(e.target.elements.snippet.value);
+
     return (
       <Card key={`card-${index}`} sectioned>
         <div style={{ float: "left" }}>
@@ -70,36 +87,67 @@ const MembershipForm = forwardRef(
               checked={(value && value.isEnabled) || false}
             />
 
-            <p>
-              <b>Note:</b> You can add the following attribute to any HTML tag
-              in your theme's code to turn it into an unlock button for this
-              lock. It uses the Unlock Paywall and contains the paywall
-              configuration for this lock.
-            </p>
-            <input
-              disabled
-              value={`onclick='window.showUnlockPaywall(${JSON.stringify({
-                network: parseInt(value && value.networkId),
-                locks: {
-                  [value && value.address]: {
-                    name: value && value.name,
-                  },
-                },
-                icon:
-                  "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
-                callToAction: {
-                  default: value && value.cta,
-                },
-              })})'`}
-            />
-
             <Stack distribution="trailing">
-              <Button primary submit>
-                Save
+              <Button
+                onClick={handleToggle}
+                ariaExpanded={open}
+                ariaControls="basic-collapsible"
+                icon={<Icon source={BuyButtonButtonLayoutMajor} color="base" />}
+              >
+                HTML-Code for Devs
+              </Button>
+              <Button primary submit disabled={isLoading}>
+                {isLoading ? "Saving..." : "Save"}
               </Button>
             </Stack>
           </FormLayout>
         </Form>
+
+        <Collapsible
+          open={open}
+          id="basic-collapsible"
+          transition={{ duration: "500ms", timingFunction: "ease-in-out" }}
+          expandOnPrint
+        >
+          <TextContainer>
+            <h3>"onclick"-attribute:</h3>
+            <p>
+              You can add the following attribute to any HTML tag in your
+              theme's code to turn it into an unlock button for this lock. It
+              uses the <b>Unlock Paywall</b> and contains the paywall
+              <b>configuration</b> for this lock.
+            </p>
+            <Form onSubmit={handleCopy}>
+              <FormLayout>
+                <Stack distribution="leading">
+                  <TextField
+                    name="snippet"
+                    value={`onclick='window.showUnlockPaywall(${JSON.stringify({
+                      network: parseInt(value && value.networkId),
+                      locks: {
+                        [value && value.address]: {
+                          name: value && value.name,
+                        },
+                      },
+                      icon:
+                        "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
+                      callToAction: {
+                        default: value && value.cta,
+                      },
+                    })})'`}
+                  />
+                  <Button
+                    submit
+                    size="slim"
+                    icon={<Icon source={DuplicateMinor} color="base" />}
+                  >
+                    Copy
+                  </Button>
+                </Stack>
+              </FormLayout>
+            </Form>
+          </TextContainer>
+        </Collapsible>
       </Card>
     );
   }
