@@ -707,7 +707,9 @@ app.prepare().then(async () => {
           path: "assets",
         });
         const appAssets = assetsRes.body.assets.filter(
-          ({ key }) => key.indexOf(`assets/${ASSET_KEY_PREFIX}`) === 0
+          ({ key }) =>
+            key.indexOf(`assets/${ASSET_KEY_PREFIX}`) === 0 ||
+            key.indexOf("sections/mb-hero") === 0
         );
         console.log("Deleting assets", appAssets);
         appAssets.map(async ({ key }) => {
