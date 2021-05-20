@@ -1,0 +1,117 @@
+{%- style -%}
+.mb-topbar {
+    background-color: red;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    padding: 0.5em;
+    border-bottom: 1px solid grey;
+    text-align: center;
+    z-index: 2;
+}
+
+.mb-topbar-content {
+    font-size: {{ section.settings.font_size }}px;
+    font-family: {{ section.settings.font.family }};
+    font-style: {{ section.settings.font.style }};
+    font-weight: {{ section.settings.font.weight }};
+}
+
+.mb-topbar-content p, .mb-topbar-content p a {
+    color: {{ section.settings.custom_color }};
+    display: inline-block;
+    margin-top: 1em;
+}
+
+.mb-topbar-content a.btn {
+    margin-left: 8px;
+}
+{%- endstyle -%}
+
+{%- if section.settings.show_announcement -%}
+  {%- if section.settings.home_page_only == false or template.name == 'index' -%}
+
+  <div data-section-id="{{ section.id }}"
+    class="mb-topbar{%- if section.settings.enable_hide_unlocked -%} hidden-after-unlocked{%- endif -%}"
+    style="background:{{ section.settings.custom_background_color }};"
+    data-section-type="topbar-section"
+  >
+      <div class="mb-topbar-content">
+        {{ section.settings.text }}
+        <a href="#" class="btn" onclick='window.showUnlockPaywall(__MEMBERSHIP_CONFIG__)'>
+            {{ section.settings.button_text }}
+        </a>
+      </div>
+
+  </div>
+
+  {%- endif -%}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "MB __MEMBERSHIP_NAME__ - Top-bar",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_announcement",
+      "label": "Show top-bar",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "home_page_only",
+      "label": "Only on home page",
+      "default": true
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "Content",
+      "default": "<p>Member Benefits</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button text",
+      "default": "Unlock"
+    },
+    {
+      "type": "font_picker",
+      "id": "font",
+      "label": "Font",
+      "default": "helvetica_n4"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 7,
+      "max": 64,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 14
+    },
+    {
+      "type": "color",
+      "id": "custom_color",
+      "label": "Font color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "custom_background_color",
+      "label": "Background color",
+      "default": "#000000"
+    }
+  ],
+  "presets": [
+    {
+      "name": "MB __MEMBERSHIP_NAME__ - Top-bar",
+      "category": {
+        "en": "Promotional"
+      }
+    }
+  ]
+}
+{% endschema %}

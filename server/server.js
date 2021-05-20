@@ -77,15 +77,12 @@ const getAssetKey = (metafieldId) =>
   `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
 
 // Get content of theme section liquid file
-const getTemplateCode = (sectionName, address, networkId, name, cta) => {
+const getHeroSectionCode = (sectionName, address, networkId, name, cta) => {
   const fileContent = fs.readFileSync(
-    `${__dirname}/shopify-theme-templates/${sectionName.replace(
-      /\-[A-Za-z0-9]+\.liquid/,
-      ".liquid"
-    )}`,
+    `${__dirname}/shopify-theme-templates/mb-hero.liquid`,
     { encoding: "utf8", flag: "r" }
   );
-  const uploadContent = fileContent
+  const liquidString = fileContent
     .replace(
       /__MEMBERSHIP_NAME__/g,
       `${address.substr(0, 5)}...${address.substr(-3, 3)}`
@@ -106,9 +103,40 @@ const getTemplateCode = (sectionName, address, networkId, name, cta) => {
         },
       })
     );
-  console.log("getTemplateCode uploadContent", uploadContent);
+  console.log("getHeroSectionCode", liquidString);
 
-  return uploadContent;
+  return liquidString;
+};
+
+const getTopbarSectionCode = (sectionName, address, networkId, name, cta) => {
+  const fileContent = fs.readFileSync(
+    `${__dirname}/shopify-theme-templates/mb-topbar.liquid`,
+    { encoding: "utf8", flag: "r" }
+  );
+  const liquidString = fileContent
+    .replace(
+      /__MEMBERSHIP_NAME__/g,
+      `${address.substr(0, 5)}...${address.substr(-3, 3)}`
+    )
+    .replace(
+      /__MEMBERSHIP_CONFIG__/g,
+      JSON.stringify({
+        network: parseInt(networkId),
+        locks: {
+          [address]: {
+            name,
+          },
+        },
+        icon:
+          "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
+        callToAction: {
+          default: cta,
+        },
+      })
+    );
+  console.log("getTopbarSectionCode", liquidString);
+
+  return liquidString;
 };
 
 // Get content for the public JS asset for this member benefit
@@ -479,7 +507,8 @@ app.prepare().then(async () => {
       const lockDetailsKey = `${LOCKDETAILS_METAFIELD_PREFIX}${metafieldId}`;
       console.log("lockDetailsKey", lockDetailsKey);
 
-      // Lock must create theme section assets
+      // Lock must create theme section assets:
+      // 1) Hero
       try {
         const sectionName = `mb-hero-${metafieldId}.liquid`;
         const assetsRes = await client.put({
@@ -487,7 +516,45 @@ app.prepare().then(async () => {
           data: {
             asset: {
               key: `sections/${sectionName}`,
-              value: getTemplateCode(
+              value: getHeroSectionCode(
+                sectionName,
+                address,
+                networkId,
+                name,
+                cta
+              ),
+            },
+          },
+          type: "application/json",
+        });
+        if (!assetsRes.body.asset) {
+          console.log("Invalid put assetsRes", sectionName, assetsRes);
+          throw "Missing asset.public_url";
+        }
+        console.log(
+          "New assetsRes.body.asset",
+          sectionName,
+          assetsRes.body.asset
+        );
+      } catch (err) {
+        console.log("Error trying to save theme section in addLock", err);
+        ctx.body = {
+          status: "error",
+          errors: "Could not create theme section for lock.",
+        };
+
+        return;
+      }
+
+      // 2) Topbar
+      try {
+        const sectionName = `mb-topbar-${metafieldId}.liquid`;
+        const assetsRes = await client.put({
+          path: "assets",
+          data: {
+            asset: {
+              key: `sections/${sectionName}`,
+              value: getTopbarSectionCode(
                 sectionName,
                 address,
                 networkId,
