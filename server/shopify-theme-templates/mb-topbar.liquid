@@ -64,19 +64,6 @@ window.showUnlockPaywall({
     </a>
     </div>
 
-    <div class="mb-topbar-badge">
-    {% for block in section.blocks %}
-    <div class="grid-item" {{ block.shopify_attributes }}>
-        {% case block.type %}
-        {% when 'lock' %}
-        Address: {{ block.settings.address }}
-        {% when 'image' %}
-        <img src="{{ block.settings.image | img_url }}">
-        {% endcase %}
-    </div>
-    {% endfor %}
-    </div>
-
 </div>
 
 {% endif %}
