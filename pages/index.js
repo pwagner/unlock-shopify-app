@@ -43,7 +43,7 @@ class Index extends React.Component {
         <TitleBar title="Settings" />
         <Layout>
           <Layout.AnnotatedSection
-            title="Setup Memperships"
+            title="Step 1: Setup Memperships"
             description="Add memberships to your shop, and reward members with discounts."
           >
             <Card title="Add Membership" sectioned>
@@ -108,7 +108,7 @@ class Index extends React.Component {
 
           {this.state.locks.length > 0 && (
             <Layout.AnnotatedSection
-              title="Publish Member Benefits"
+              title="Step 2: Publish Member Benefits"
               description="Show your customers what benefits await them, if they get a membership."
             >
               <Card title="Add Theme Section (recommended)" sectioned>
@@ -279,10 +279,15 @@ class Index extends React.Component {
   handleSaveLock = async (e) => {
     this.setState({ isLoading: true });
     try {
+      const otherLocks = this.state.locks
+        .filter(
+          ({ metafieldId }) =>
+            metafieldId != e.target.elements.metafieldId.value
+        )
+        .map(({ networkId, name, address }) => ({ networkId, name, address }));
       const metafieldId = e.target.elements.metafieldId.value;
       const address = e.target.elements.lockAddress.value;
       const name = e.target.elements.name.value;
-      const cta = e.target.elements.cta.value;
       const isEnabled = e.target.elements.enabled.checked;
       const networkId = parseInt(e.target.elements.networkId.value);
       const discountId = e.target.elements.discountId.value;
@@ -291,11 +296,11 @@ class Index extends React.Component {
         body: JSON.stringify({
           address,
           name,
-          cta,
           isEnabled,
           networkId,
           discountId,
           metafieldId,
+          otherLocks,
         }),
       });
       const result = await saveRes.json();

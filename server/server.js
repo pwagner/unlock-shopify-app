@@ -77,7 +77,7 @@ const getAssetKey = (metafieldId) =>
   `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
 
 // Get content of theme section liquid file
-const getHeroSectionCode = (sectionName, address, networkId, name, cta) => {
+const getHeroSectionCode = (sectionName, address, networkId, name) => {
   const fileContent = fs.readFileSync(
     `${__dirname}/shopify-theme-templates/mb-hero.liquid`,
     { encoding: "utf8", flag: "r" }
@@ -90,16 +90,16 @@ const getHeroSectionCode = (sectionName, address, networkId, name, cta) => {
     .replace(
       /__MEMBERSHIP_CONFIG__/g,
       JSON.stringify({
-        network: parseInt(networkId),
         locks: {
           [address]: {
+            network: parseInt(networkId),
             name,
           },
         },
         icon:
           "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
         callToAction: {
-          default: cta,
+          default: "Unlock",
         },
       })
     );
@@ -108,31 +108,46 @@ const getHeroSectionCode = (sectionName, address, networkId, name, cta) => {
   return liquidString;
 };
 
-const getTopbarSectionCode = (sectionName, address, networkId, name, cta) => {
+const getTopbarSectionCode = (
+  sectionTemplateName,
+  address,
+  network,
+  name,
+  otherLocks
+) => {
   const fileContent = fs.readFileSync(
-    `${__dirname}/shopify-theme-templates/mb-topbar.liquid`,
+    `${__dirname}/shopify-theme-templates/${sectionTemplateName}`,
     { encoding: "utf8", flag: "r" }
   );
+  const locksByAddr = {
+    [address]: {
+      name,
+      network,
+    },
+  };
+  const lockOptions = [
+    {
+      value: address,
+      label: name,
+    },
+  ];
+  otherLocks.map((lock) => {
+    locksByAddr[lock.address] = {
+      name: lock.name,
+      network: lock.networkId,
+    };
+    lockOptions.push({
+      value: lock.address,
+      label: lock.name,
+    });
+  });
+
   const liquidString = fileContent
+    .replace(/__LOCKS_BY_ADDR__/g, JSON.stringify(locksByAddr))
+    .replace(/__LOCK_OPTIONS__/g, JSON.stringify(lockOptions))
     .replace(
-      /__MEMBERSHIP_NAME__/g,
-      `${address.substr(0, 5)}...${address.substr(-3, 3)}`
-    )
-    .replace(
-      /__MEMBERSHIP_CONFIG__/g,
-      JSON.stringify({
-        network: parseInt(networkId),
-        locks: {
-          [address]: {
-            name,
-          },
-        },
-        icon:
-          "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
-        callToAction: {
-          default: cta,
-        },
-      })
+      /__LOCK_VALUES__/g,
+      JSON.stringify(lockOptions.map(({ value }) => value)[0]) // TODO: pre-select multiple locks?
     );
   console.log("getTopbarSectionCode", liquidString);
 
@@ -425,7 +440,7 @@ app.prepare().then(async () => {
           console.log("Error trying to delete lock metafield", err);
         }
 
-        if (detailsMetafieldRes.body.metafields.lenth > 0) {
+        if (detailsMetafieldRes.body.metafields.length > 0) {
           const { id, value } = detailsMetafieldRes.body.metafields[0];
           console.log("About to delete details metafield and script tag", id);
 
@@ -458,11 +473,13 @@ app.prepare().then(async () => {
           query: { "asset[key]": getAssetKey(metafieldId) },
         });
 
-        // Delete theme section template
+        // Delete hero theme section template
         await client.delete({
           path: "assets",
           query: { "asset[key]": `sections/mb-hero-${metafieldId}.liquid` },
         });
+
+        // TODO: Update lock blocks of multi-lock theme sections (e.g. topbar)
 
         ctx.body = {
           status: "success",
@@ -498,10 +515,10 @@ app.prepare().then(async () => {
         metafieldId,
         address,
         name,
-        cta,
         isEnabled,
         networkId,
         discountId,
+        otherLocks,
       } = payload;
 
       const lockDetailsKey = `${LOCKDETAILS_METAFIELD_PREFIX}${metafieldId}`;
@@ -516,13 +533,7 @@ app.prepare().then(async () => {
           data: {
             asset: {
               key: `sections/${sectionName}`,
-              value: getHeroSectionCode(
-                sectionName,
-                address,
-                networkId,
-                name,
-                cta
-              ),
+              value: getHeroSectionCode(sectionName, address, networkId, name),
             },
           },
           type: "application/json",
@@ -531,16 +542,16 @@ app.prepare().then(async () => {
           console.log("Invalid put assetsRes", sectionName, assetsRes);
           throw "Missing asset.public_url";
         }
-        console.log(
-          "New assetsRes.body.asset",
-          sectionName,
-          assetsRes.body.asset
-        );
+        // console.log(
+        //   "New assetsRes.body.asset",
+        //   sectionName,
+        //   assetsRes.body.asset
+        // );
       } catch (err) {
-        console.log("Error trying to save theme section in addLock", err);
+        console.log("Error trying to save here theme section in addLock", err);
         ctx.body = {
           status: "error",
-          errors: "Could not create theme section for lock.",
+          errors: "Could not create hero theme section for lock.",
         };
 
         return;
@@ -548,19 +559,20 @@ app.prepare().then(async () => {
 
       // 2) Topbar
       try {
-        const sectionName = `mb-topbar-${metafieldId}.liquid`;
+        const sectionName = "mb-topbar.liquid";
+        const topBarSectionCode = getTopbarSectionCode(
+          sectionName,
+          address,
+          networkId,
+          name,
+          otherLocks
+        );
         const assetsRes = await client.put({
           path: "assets",
           data: {
             asset: {
               key: `sections/${sectionName}`,
-              value: getTopbarSectionCode(
-                sectionName,
-                address,
-                networkId,
-                name,
-                cta
-              ),
+              value: topBarSectionCode,
             },
           },
           type: "application/json",
@@ -569,16 +581,14 @@ app.prepare().then(async () => {
           console.log("Invalid put assetsRes", sectionName, assetsRes);
           throw "Missing asset.public_url";
         }
-        console.log(
-          "New assetsRes.body.asset",
-          sectionName,
-          assetsRes.body.asset
-        );
       } catch (err) {
-        console.log("Error trying to save theme section in addLock", err);
+        console.log(
+          "Error trying to save topbar theme section in addLock",
+          err
+        );
         ctx.body = {
           status: "error",
-          errors: "Could not create theme section for lock.",
+          errors: "Could not create topbar theme section for lock.",
         };
 
         return;
@@ -634,7 +644,7 @@ app.prepare().then(async () => {
           detailsMetafieldRes.body.metafields
         );
 
-        const metafields = detailsMetafieldRes.body;
+        const { metafields } = detailsMetafieldRes.body;
         if (metafields.length > 0) {
           lockDetails = JSON.parse(metafields[0].value);
           lockDetailsMetafieldId = metafields[0].id;
@@ -674,51 +684,26 @@ app.prepare().then(async () => {
         scriptTagId = scriptTagRes.body.script_tag.id;
       }
 
-      if (lockDetails) {
-        // Update existing lock
-        await client.put({
-          path: `metafields/${lockDetailsMetafieldId}`,
-          data: {
-            metafield: {
-              namespace: METAFIELD_NAMESPACE,
-              key: lockDetailsKey,
-              value: JSON.stringify({
-                address,
-                name,
-                cta,
-                isEnabled,
-                networkId,
-                discountId,
-                scriptTagId,
-              }),
-              value_type: "json_string",
-            },
+      // Update or create lock details metafield
+      await client.post({
+        path: "metafields",
+        data: {
+          metafield: {
+            namespace: METAFIELD_NAMESPACE,
+            key: lockDetailsKey,
+            value: JSON.stringify({
+              address,
+              name,
+              isEnabled,
+              networkId,
+              discountId,
+              scriptTagId,
+            }),
+            value_type: "json_string",
           },
-          type: "application/json",
-        });
-      } else {
-        // Create new lock
-        await client.post({
-          path: "metafields",
-          data: {
-            metafield: {
-              namespace: METAFIELD_NAMESPACE,
-              key: lockDetailsKey,
-              value: JSON.stringify({
-                address,
-                name,
-                cta,
-                isEnabled,
-                networkId,
-                discountId,
-                scriptTagId,
-              }),
-              value_type: "json_string",
-            },
-          },
-          type: "application/json",
-        });
-      }
+        },
+        type: "application/json",
+      });
 
       ctx.body = {
         status: "success",

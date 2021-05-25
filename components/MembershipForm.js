@@ -69,18 +69,11 @@ const MembershipForm = forwardRef(
               defaultValue={(value && value.discountId) || ""}
             />
             <LockTextField
-              label="Lock name"
+              label="Membership name"
               name="name"
-              helpText="Explain the benefit your customers receive here"
+              helpText="Explain the benefit your members receive here"
               onChange={handleTextInput}
               defaultValue={(value && value.name) || ""}
-            />
-            <LockTextField
-              label="Call to action"
-              name="cta"
-              helpText="Enter an engaging label for the join-button here"
-              onChange={handleTextInput}
-              defaultValue={(value && value.cta) || ""}
             />
             <IsEnabledCheckbox
               name="enabled"
@@ -123,16 +116,16 @@ const MembershipForm = forwardRef(
                   <TextField
                     name="snippet"
                     value={`onclick='window.showUnlockPaywall(${JSON.stringify({
-                      network: parseInt(value && value.networkId),
                       locks: {
                         [value && value.address]: {
+                          network: parseInt(value && value.networkId),
                           name: value && value.name,
                         },
                       },
                       icon:
                         "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
                       callToAction: {
-                        default: value && value.cta,
+                        default: "Unlock",
                       },
                     })})'`}
                   />

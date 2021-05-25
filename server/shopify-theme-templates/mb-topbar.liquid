@@ -1,4 +1,4 @@
-{%- style -%}
+{% style %}
 .mb-topbar {
     background-color: red;
     position: fixed;
@@ -20,43 +20,77 @@
 .mb-topbar-content p, .mb-topbar-content p a {
     color: {{ section.settings.custom_color }};
     display: inline-block;
-    margin-top: 1em;
+    margin-top: 0.5em 0;
 }
 
 .mb-topbar-content a.btn {
     margin-left: 8px;
 }
-{%- endstyle -%}
+{% endstyle %}
 
-{%- if section.settings.show_announcement -%}
-  {%- if section.settings.home_page_only == false or template.name == 'index' -%}
 
-  <div data-section-id="{{ section.id }}"
-    class="mb-topbar{%- if section.settings.enable_hide_unlocked -%} hidden-after-unlocked{%- endif -%}"
+{% if section.settings.home_page_only == false or template.name == 'index' %}
+<script>
+    var locksByAddr = __LOCKS_BY_ADDR__;
+</script>
+
+{% capture on_click_script %}
+window.showUnlockPaywall({
+    locks: {
+    {% for block in section.blocks %}
+        {% case block.type %}
+        {% when 'lock' %}
+            "{{ block.settings.membership }}": locksByAddr["{{ block.settings.membership }}"]
+            {% if forloop.last != true %},{% endif %}
+        {% endcase %}
+    {% endfor %}
+    },
+    icon: "https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg",
+    callToAction: {
+        default: "Member Benefits"
+    }
+})
+{% endcapture %}
+<div
+    data-section-id="{{ section.id }}"
+    class="mb-topbar {% if section.settings.enable_hide_unlocked %} hidden-after-unlocked{% endif %}"
     style="background:{{ section.settings.custom_background_color }};"
     data-section-type="topbar-section"
-  >
-      <div class="mb-topbar-content">
-        {{ section.settings.text }}
-        <a href="#" class="btn" onclick='window.showUnlockPaywall(__MEMBERSHIP_CONFIG__)'>
-            {{ section.settings.button_text }}
-        </a>
-      </div>
+>
+    <div class="mb-topbar-content">
+    {{ section.settings.text }}
+    <a href="#" class="btn" onclick='{{ on_click_script }}'>
+        {{ section.settings.button_text }}
+    </a>
+    </div>
 
-  </div>
+    <div class="mb-topbar-badge">
+    {% for block in section.blocks %}
+    <div class="grid-item" {{ block.shopify_attributes }}>
+        {% case block.type %}
+        {% when 'lock' %}
+        Address: {{ block.settings.address }}
+        {% when 'image' %}
+        <img src="{{ block.settings.image | img_url }}">
+        {% endcase %}
+    </div>
+    {% endfor %}
+    </div>
 
-  {%- endif -%}
-{%- endif -%}
+</div>
+
+{% endif %}
 
 {% schema %}
 {
-  "name": "MB __MEMBERSHIP_NAME__ - Top-bar",
+  "name": "MB - Top-bar",
   "settings": [
     {
       "type": "checkbox",
-      "id": "show_announcement",
-      "label": "Show top-bar",
-      "default": false
+      "id": "enable_hide_unlocked",
+      "label": "Hidden if unlocked",
+      "info": "If enabled, the top-bar will not be displayed to members.",
+      "default": true
     },
     {
       "type": "checkbox",
@@ -105,12 +139,35 @@
       "default": "#000000"
     }
   ],
+  "blocks": [
+      {
+        "type": "lock",
+        "name": "Membership",
+        "settings": [
+          {
+            "type": "select",
+            "id": "membership",
+            "label": "Membership",
+            "options": __LOCK_OPTIONS__,
+            "info": "Select memberships for this section"
+          }
+        ]
+      }
+  ],
   "presets": [
     {
-      "name": "MB __MEMBERSHIP_NAME__ - Top-bar",
+      "name": "MB - Top-bar",
       "category": {
         "en": "Promotional"
-      }
+      },
+      "blocks": [
+        {
+            "type": "lock",
+            "settings": {
+                "membership": __LOCK_VALUES__
+            }
+        }
+      ]
     }
   ]
 }
