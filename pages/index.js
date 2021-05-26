@@ -156,7 +156,7 @@ class Index extends React.Component {
   <h1>Member Benefits</h1>
 
   <p class="unlock-content locked">
-    You don't seem to have a memberhsip 🔒<br/>
+    You don't seem to have a membership 🔒<br/>
     Get a key to become a member instantly 🔑
   </p>
 
@@ -172,8 +172,8 @@ class Index extends React.Component {
                       .map(
                         (lock, key) => `
 <h2>${this.state.locks[key].name}</h2>
-<button class="button" onclick='window.showUnlockPaywall({"network":${this.state.locks[key].networkId},"locks":{"${this.state.locks[key].address}":{"name":"${this.state.locks[key].name}"}},"icon":"https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg","callToAction":{"default":"${this.state.locks[key].cta}"}})'>
-  ${this.state.locks[key].cta}
+<button class="btn" onclick='window.showUnlockPaywall({"network":${this.state.locks[key].networkId},"locks":{"${this.state.locks[key].address}":{"name":"${this.state.locks[key].name}"}},"icon":"https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg","callToAction":{"default":"${this.state.locks[key].cta}"}})'>
+  Unlock Member Benefit
 </button>
 `
                       )
