@@ -180,7 +180,35 @@ const deleteAsset = async (client, key) => {
   }
 };
 
+const WEBHOOK_PATH_APP_UNINSTALLED = "/webhooks";
+// Mandatory GDPR webhooks:
+const WEBHOOK_PATH_CUSTOMERS_REQUEST = "/webhooks/customers-data_request";
+const WEBHOOK_PATH_CUSTOMERS_REDACT = "/webhooks/customers-redact";
+const WEBHOOK_PATH_SHOP_REDACT = "/webhooks/customers-redact";
+
 const ACTIVE_SHOPIFY_SHOPS = loadActiveShopsFromStorage();
+
+const registerWebhookAppUninstalled = async (shop, accessToken) => {
+  const response = await Shopify.Webhooks.Registry.register({
+    shop,
+    accessToken,
+    path: WEBHOOK_PATH_APP_UNINSTALLED,
+    topic: "APP_UNINSTALLED",
+    webhookHandler: async (topic, shop, body) => {
+      delete ACTIVE_SHOPIFY_SHOPS[shop];
+      sessionStorage.setAsync(
+        "ACTIVE_SHOPIFY_SHOPS",
+        JSON.stringify(ACTIVE_SHOPIFY_SHOPS)
+      );
+    },
+  });
+
+  if (!response.success) {
+    console.log(
+      `Failed to register APP_UNINSTALLED webhook: ${response.result}`
+    );
+  }
+};
 
 app.prepare().then(async () => {
   const server = new Koa();
@@ -196,26 +224,7 @@ app.prepare().then(async () => {
           "ACTIVE_SHOPIFY_SHOPS",
           JSON.stringify(ACTIVE_SHOPIFY_SHOPS)
         );
-
-        const response = await Shopify.Webhooks.Registry.register({
-          shop,
-          accessToken,
-          path: "/webhooks",
-          topic: "APP_UNINSTALLED",
-          webhookHandler: async (topic, shop, body) => {
-            delete ACTIVE_SHOPIFY_SHOPS[shop];
-            sessionStorage.setAsync(
-              "ACTIVE_SHOPIFY_SHOPS",
-              JSON.stringify(ACTIVE_SHOPIFY_SHOPS)
-            );
-          },
-        });
-
-        if (!response.success) {
-          console.log(
-            `Failed to register APP_UNINSTALLED webhook: ${response.result}`
-          );
-        }
+        registerWebhookAppUninstalled(shop, accessToken);
 
         // Redirect to app with shop parameter upon auth
         ctx.redirect(`/?shop=${shop}`);
@@ -240,12 +249,47 @@ app.prepare().then(async () => {
     }
   });
 
-  router.post("/webhooks", async (ctx) => {
+  router.post(WEBHOOK_PATH_APP_UNINSTALLED, async (ctx) => {
     try {
       await Shopify.Webhooks.Registry.process(ctx.req, ctx.res);
       console.log(`Webhook processed, returned status code 200`);
     } catch (error) {
       console.log(`Failed to process webhook: ${error}`);
+    }
+  });
+
+  router.post(WEBHOOK_PATH_CUSTOMERS_REQUEST, async (ctx) => {
+    try {
+      console.log(`Processing WEBHOOK_PATH_CUSTOMERS_REQUEST`);
+      // We don't store any customer data
+      ctx.body = {};
+      ctx.res.statusCode = 200;
+    } catch (error) {
+      console.log(
+        `Failed to process ${WEBHOOK_PATH_CUSTOMERS_REQUEST}: ${error}`
+      );
+    }
+  });
+
+  router.post(WEBHOOK_PATH_CUSTOMERS_REDACT, async (ctx) => {
+    try {
+      console.log(`Processing WEBHOOK_PATH_CUSTOMERS_REDACT`);
+      // We don't store any customer data
+      ctx.res.statusCode = 200;
+    } catch (error) {
+      console.log(
+        `Failed to process ${WEBHOOK_PATH_CUSTOMERS_REDACT}: ${error}`
+      );
+    }
+  });
+
+  router.post(WEBHOOK_PATH_SHOP_REDACT, async (ctx) => {
+    try {
+      console.log(`Processing WEBHOOK_PATH_SHOP_REDACT`);
+      // We don't store any shop data
+      ctx.res.statusCode = 200;
+    } catch (error) {
+      console.log(`Failed to process ${WEBHOOK_PATH_SHOP_REDACT}: ${error}`);
     }
   });
 

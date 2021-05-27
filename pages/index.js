@@ -113,12 +113,8 @@ class Index extends React.Component {
             >
               <Card title="Add Theme Section (recommended)" sectioned>
                 <p>
-                  You can use the <b>theme sections</b> starting with{" "}
-                  <em>MB</em> followed by the abbreviated lock address (e.g. "MB
-                  0x123...def" for the first membership) in the{" "}
-                  <a href="/admin/themes">Theme Editor</a>. <br />
-                  You can add sections to your theme under Online Store > Themes
-                  > Customize. <br />
+                  Add sections to your theme in your Online Store settings under
+                  Themes: Customize. <br />
                   You'll find the "MB -" sections in the <b>Promotional</b>{" "}
                   category.
                 </p>
