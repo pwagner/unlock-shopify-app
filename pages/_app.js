@@ -54,7 +54,6 @@ class MyApp extends App {
     const { Component, pageProps, shopOrigin } = this.props;
     const hostBuffer = Buffer.from(`${shopOrigin}/admin`, "utf-8");
     const host = hostBuffer.toString("base64");
-    console.log("host", host);
     return (
       <AppProvider i18n={translations}>
         <Provider
