@@ -11,14 +11,17 @@ import {
   Card,
   TextStyle,
   Heading,
+  Link,
 } from "@shopify/polaris";
 import { TitleBar, Context } from "@shopify/app-bridge-react";
 import { authenticatedFetch } from "@shopify/app-bridge-utils";
+import { Redirect } from "@shopify/app-bridge/actions";
 import MembershipForm from "../components/MembershipForm";
 
 class Index extends React.Component {
   static contextType = Context;
   static fetchWithAuth; // for authenticated requests to Shopify Admin API via app backend
+  static redirect;
 
   constructor(props) {
     super(props);
@@ -33,6 +36,7 @@ class Index extends React.Component {
 
   componentDidMount() {
     const app = this.context;
+    this.redirect = Redirect.create(app);
     this.fetchWithAuth = authenticatedFetch(app);
     this.loadLocks();
   }
@@ -111,94 +115,16 @@ class Index extends React.Component {
               title="Step 2: Publish Member Benefits"
               description="Show your customers what benefits await them, if they get a membership."
             >
-              <Card title="Add Theme Section (recommended)" sectioned>
+              <Card title="Add Theme Section" sectioned>
                 <p>
                   Add sections to your theme in your Online Store settings under
-                  Themes: Customize. <br />
+                  <Link onClick={this.handleThemeClick}>
+                    Themes: Customize
+                  </Link>{" "}
+                  <br />
                   You'll find the "MB -" sections in the <b>Promotional</b>{" "}
-                  category.
+                  category. There are currently hero and top-bar sections.
                 </p>
-              </Card>
-              <Card title="Custom Unlock Buttons" sectioned>
-                <p>
-                  Optionally, you can edit your theme's code and integrate
-                  custom unlock buttons. Find the appropriate theme file under
-                  Online Store > Themes > Actions > Edit code. Here's an example
-                  that you could for example use in your theme's{" "}
-                  <b>index.liquid</b>:
-                </p>
-                <TextField
-                  multiline={2}
-                  value={
-                    `<style>
-.unlock-demo {
-  text-align: center;
-}
-
-.unlock-content {
-  display: none;
-}
-
-.unlock-content .locked {
-  display: none;  
-}
-
-.unlock-content .unlocked {
-  display: none;
-}
-</style>
-
-<div class="unlock-demo">
-  <h1>Member Benefits</h1>
-
-  <p class="unlock-content locked">
-    You don't seem to have a membership 🔒<br/>
-    Get a key to become a member instantly 🔑
-  </p>
-
-  <p class="unlock-content unlocked">
-    Welcome, dear member! 🎉<br/>
-    You've unlocked <b>your benefit</b> 🎁
-  </p>
-
-  <div class="hidden-after-unlocked">
-    <hr/>
-` +
-                    this.state.locks
-                      .map(
-                        (lock, key) => `
-<h2>${this.state.locks[key].name}</h2>
-<button class="btn" onclick='window.showUnlockPaywall({"network":${this.state.locks[key].networkId},"locks":{"${this.state.locks[key].address}":{"name":"${this.state.locks[key].name}"}},"icon":"https://unlock-protocol.com/static/images/svg/unlock-word-mark.svg","callToAction":{"default":"${this.state.locks[key].cta}"}})'>
-  Unlock Member Benefit
-</button>
-`
-                      )
-                      .join("<hr/>") +
-                    `
-    <hr/>
-  </div>
-
-</div>
-                    `
-                  }
-                />
-              </Card>
-              <Card title="CSS Classes" sectioned>
-                <p>
-                  Use the following CSS class to{" "}
-                  <b>display elements to members only after unlocking</b>:
-                </p>
-                <pre>class="unlocked-content unlocked"</pre>
-                <p>
-                  Use the following CSS class to{" "}
-                  <b>display elements to non-members after unlock attempt</b>:
-                </p>
-                <pre>class="unlocked-content locked"</pre>
-                <p>
-                  Use the following CSS class to{" "}
-                  <b>display elements only before the unlock attempt</b>:
-                </p>
-                <pre>class="hidden-after-unlocked"</pre>
               </Card>
             </Layout.AnnotatedSection>
           )}
@@ -208,6 +134,10 @@ class Index extends React.Component {
       </Page>
     );
   }
+
+  handleThemeClick = () => {
+    this.redirect.dispatch(Redirect.Action.ADMIN_PATH, "/themes");
+  };
 
   handleReset = async () => {
     try {
