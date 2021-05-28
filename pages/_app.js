@@ -52,6 +52,9 @@ function MyProvider(props) {
 class MyApp extends App {
   render() {
     const { Component, pageProps, shopOrigin } = this.props;
+    const hostBuffer = Buffer.from(`${shopOrigin}/admin`, "utf-8");
+    const host = hostBuffer.toString("base64");
+    console.log("host", host);
     return (
       <AppProvider i18n={translations}>
         <Provider
@@ -59,6 +62,7 @@ class MyApp extends App {
             apiKey: API_KEY,
             shopOrigin: shopOrigin,
             forceRedirect: true,
+            host: host,
           }}
         >
           <MyProvider Component={Component} {...pageProps} />

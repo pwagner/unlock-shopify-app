@@ -12,7 +12,7 @@ import {
   TextStyle,
   Heading,
 } from "@shopify/polaris";
-import { TitleBar, Context, Loading } from "@shopify/app-bridge-react";
+import { TitleBar, Context } from "@shopify/app-bridge-react";
 import { authenticatedFetch } from "@shopify/app-bridge-utils";
 import MembershipForm from "../components/MembershipForm";
 

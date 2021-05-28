@@ -1243,12 +1243,12 @@
   resolved "https://registry.yarnpkg.com/@opentelemetry/context-base/-/context-base-0.14.0.tgz#c67fc20a4d891447ca1a855d7d70fa79a3533001"
   integrity sha512-sDOAZcYwynHFTbLo6n8kIbLiVF3a3BLkrmehJUyEbT9F+Smbi47kLGS2gG2g0fjBLR/Lr1InPD7kXL7FaTqEkw==
 
-"@shopify/app-bridge-react@^1.29.0":
-  version "1.30.0"
-  resolved "https://registry.yarnpkg.com/@shopify/app-bridge-react/-/app-bridge-react-1.30.0.tgz#18b29cfe0f717da7d8384be717c8f55210df9dd2"
-  integrity sha512-Tlif7rBFKuqbsN3xf8LF40fsnPWSRAMD3DGmFmeTovGoqQ4E52dOpIYsfnE7M0Grhg+F9xMvGWDETc+bHZ0GXA==
+"@shopify/app-bridge-react@^2.0.2":
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/@shopify/app-bridge-react/-/app-bridge-react-2.0.2.tgz#487e1c1aa75a9209e1164f944ebfed8a017e7b4c"
+  integrity sha512-F0Uo6yuSCZueRXfGaa0BgQkyd+DlCN5bCQLJjhQptleNyJihesSjOcHXYVoCRYZUyXKtTUxB87RzKXvNhCz+Ng==
   dependencies:
-    "@shopify/app-bridge" "^1.30.0"
+    "@shopify/app-bridge" "^2.0.2"
 
 "@shopify/app-bridge-utils@^1.29.0":
   version "1.30.0"
@@ -1261,6 +1261,13 @@
   version "1.30.0"
   resolved "https://registry.yarnpkg.com/@shopify/app-bridge/-/app-bridge-1.30.0.tgz#052451bfda6a3ac017cc3e1f7de397dfe27d90a2"
   integrity sha512-I8esEzsWzGiZ4Ek8qceVMbkPptwcu57P6VbO5FUW6m3p2jymcq/bvIRaKbc2oDdAUmMdmpd4Dl/B874aWtJegg==
+
+"@shopify/app-bridge@^2.0.2":
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/@shopify/app-bridge/-/app-bridge-2.0.2.tgz#f74eabcdcd8ba9df868a3f784c7361f1b5819707"
+  integrity sha512-b8UwI2nJTIibPA+/jCQ0raTfX92kEHRdKbvGQZJtbKTd2CqN8qGwHb/YPigcJWzo3LsOUnIs2gi33X12/2h7jg==
+  dependencies:
+    base64url "^3.0.1"
 
 "@shopify/koa-shopify-auth@^4.1.2":
   version "4.1.2"
@@ -2336,6 +2343,11 @@ base64-js@^1.0.2, base64-js@^1.3.1:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/base64-js/-/base64-js-1.5.1.tgz#1b1b440160a5bf7ad40b650f095963481903930a"
   integrity sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==
+
+base64url@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/base64url/-/base64url-3.0.1.tgz#6399d572e2bc3f90a9a8b22d5dbb0a32d33f788d"
+  integrity sha512-ir1UPr3dkwexU7FdV8qBBbNDRUhMmIekYMFZfi+C/sLNnRESKPl23nB9b2pltqfOQNnGzsDdId90AEtG5tCx4A==
 
 base@^0.11.1:
   version "0.11.2"
