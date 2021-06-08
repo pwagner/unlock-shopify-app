@@ -12,6 +12,8 @@ import {
   TextStyle,
   Heading,
   Link,
+  Banner,
+  DisplayText,
 } from "@shopify/polaris";
 import { TitleBar, Context } from "@shopify/app-bridge-react";
 import { authenticatedFetch } from "@shopify/app-bridge-utils";
@@ -31,6 +33,8 @@ class Index extends React.Component {
       newLockAddr: "",
       newLockAddrError: false,
       isLoading: false,
+      isAddingMembership: false,
+      hasLoadedLocks: false,
     };
   }
 
@@ -50,64 +54,103 @@ class Index extends React.Component {
             title="Step 1: Setup Memperships"
             description="Add memberships to your shop, and reward members with discounts."
           >
-            <Card title="Add Membership" sectioned>
-              <Form onSubmit={this.handleContinue}>
-                <FormLayout>
-                  {this.state.newLockAddrError && (
-                    <InlineError
-                      message={this.state.newLockAddrError}
-                      id="lockAddrError"
-                    />
-                  )}
-                  <TextField
-                    id="lockAddr"
-                    label="Lock smart contract address"
-                    value={this.state.newLockAddr}
-                    onChange={(val) => this.validateAddr(val)}
-                    aria-describedby="lockAddrError"
-                    helpText="Example: 0x0b74E0ff5B61a16e94a5A29938d4Ea149CcD1619"
-                  />
+            {this.state.hasLoadedLocks ? (
+              this.state.isAddingMembership ? (
+                <Card sectioned>
+                  <div style={{ float: "left" }}>
+                    <h2 className="Polaris-Heading">Add Membership</h2>
+                  </div>
                   <Stack distribution="trailing">
-                    <Button
-                      primary
-                      submit
-                      disabled={
-                        this.state.newLockAddrError ||
-                        this.state.newLockAddr.length < 1
-                      }
-                    >
-                      Continue
+                    <Button small onClick={this.cancelAddMembership}>
+                      X
                     </Button>
                   </Stack>
-                </FormLayout>
-              </Form>
+                  <br />
+                  <Form onSubmit={this.handleContinue}>
+                    <FormLayout>
+                      {this.state.newLockAddrError && (
+                        <InlineError
+                          message={this.state.newLockAddrError}
+                          id="lockAddrError"
+                        />
+                      )}
+                      <TextField
+                        id="lockAddr"
+                        label="Lock smart contract address"
+                        value={this.state.newLockAddr}
+                        onChange={(val) => this.validateAddr(val)}
+                        aria-describedby="lockAddrError"
+                        helpText="Example: 0x0b74E0ff5B61a16e94a5A29938d4Ea149CcD1619"
+                        placeholder="Enter the membership's lock address"
+                      />
+                      <Stack distribution="trailing">
+                        <Button
+                          primary
+                          submit
+                          disabled={
+                            this.state.newLockAddrError ||
+                            this.state.newLockAddr.length < 1
+                          }
+                        >
+                          Continue
+                        </Button>
+                      </Stack>
+                    </FormLayout>
+                  </Form>
 
-              <TextStyle variation="subdued">
-                <Heading>No Lock?</Heading>
-                <p>
-                  You can create your own locks in the{" "}
-                  <a
-                    href="https://app.unlock-protocol.com/dashboard"
-                    target="_blank"
-                  >
-                    Unlock Protocol Dashboard
-                  </a>
-                  .
-                </p>
-              </TextStyle>
-            </Card>
+                  <TextStyle variation="subdued">
+                    <Heading>No Lock?</Heading>
+                    <p>
+                      You can create your own locks in the{" "}
+                      <a
+                        href="https://app.unlock-protocol.com/dashboard"
+                        target="_blank"
+                      >
+                        Unlock Protocol Dashboard
+                      </a>
+                      .
+                    </p>
+                  </TextStyle>
+                </Card>
+              ) : (
+                <Button
+                  primary
+                  onClick={this.addMembership}
+                  disabled={!this.state.hasLoadedLocks}
+                >
+                  Add Membership
+                </Button>
+              )
+            ) : (
+              <Banner>Loading, please wait…</Banner>
+            )}
 
-            {this.state.locks.map((value, index) => (
-              <MembershipForm
-                value={value}
-                discounts={this.state.discounts}
-                index={index + 1}
-                key={value.metafieldId}
-                onSave={this.handleSaveLock}
-                onDelete={this.deleteLock}
-                isLoading={this.state.isLoading}
-              />
-            ))}
+            {this.state.hasLoadedLocks && (
+              <div style={{ "padding-top": "24px" }}>
+                <hr />
+                <div style={{ margin: "24px 0" }}>
+                  <DisplayText size="extraLarge">Memberships:</DisplayText>
+                </div>
+              </div>
+            )}
+
+            {this.state.hasLoadedLocks && this.state.locks.length === 0 ? (
+              <Banner>
+                Click the button on top to add your first membership
+              </Banner>
+            ) : (
+              this.state.locks.map((value, index) => (
+                <MembershipForm
+                  value={value}
+                  discounts={this.state.discounts}
+                  index={index + 1}
+                  key={value.metafieldId}
+                  onSave={this.handleSaveLock}
+                  onDelete={this.deleteLock}
+                  isLoading={this.state.isLoading}
+                />
+              ))
+            )}
           </Layout.AnnotatedSection>
 
           {this.state.locks.length > 0 && (
@@ -117,10 +160,8 @@ class Index extends React.Component {
             >
               <Card title="Add Theme Section" sectioned>
                 <p>
-                  Add sections to your theme in your Online Store settings under
-                  <Link onClick={this.handleThemeClick}>
-                    Themes: Customize
-                  </Link>{" "}
+                  Add sections to your theme in your Online Store settings under{" "}
+                  <Link onClick={this.handleThemeClick}>Themes: Customize</Link>{" "}
                   <br />
                   You'll find the "MB -" sections in the <b>Promotional</b>{" "}
                   category. There are currently hero and top-bar sections.
@@ -166,6 +207,7 @@ class Index extends React.Component {
       this.setState({
         locks: response.data.locks,
         discounts: response.data.discounts,
+        hasLoadedLocks: true,
       });
     } catch (err) {
       console.log("Error in loadLocks", err);
@@ -196,7 +238,10 @@ class Index extends React.Component {
           },
         ],
       });
-      this.setState({ newLockAddr: "" });
+      this.setState({
+        newLockAddr: "",
+        isAddingMembership: false,
+      });
     } catch (err) {
       console.log("Error in handleContinue:", err);
     }
@@ -284,6 +329,14 @@ class Index extends React.Component {
 
     console.log("false");
     this.setState({ newLockAddrError: false });
+  };
+
+  addMembership = () => {
+    this.setState({ isAddingMembership: true });
+  };
+
+  cancelAddMembership = () => {
+    this.setState({ isAddingMembership: false });
   };
 }
 
