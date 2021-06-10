@@ -103,7 +103,7 @@ const getHeroSectionCode = (sectionName, address, networkId, name) => {
         },
       })
     );
-  console.log("getHeroSectionCode", liquidString);
+  // console.log("getHeroSectionCode", liquidString);
 
   return liquidString;
 };
@@ -149,7 +149,7 @@ const getTopbarSectionCode = (
       /__LOCK_VALUES__/g,
       JSON.stringify(lockOptions.map(({ value }) => value)[0]) // TODO: pre-select multiple locks?
     );
-  console.log("getTopbarSectionCode", liquidString);
+  // console.log("getTopbarSectionCode", liquidString);
 
   return liquidString;
 };
@@ -163,7 +163,7 @@ const getUnlockJavaScript = (discountCode) => {
   const uploadContent = fileContent
     .replace(/__SHOP__/g, SHOP)
     .replace(/__DISCOUNT_CODE__/g, discountCode);
-  console.log("getUnlockJavaScript uploadContent", uploadContent);
+  // console.log("getUnlockJavaScript uploadContent", uploadContent);
 
   return uploadContent;
 };
@@ -319,10 +319,6 @@ app.prepare().then(async () => {
         const metafieldsRes = await client.get({
           path: "metafields",
         });
-        console.log(
-          "get locks: metafieldsRes.body.metafields",
-          metafieldsRes.body.metafields
-        );
         const locks = metafieldsRes.body.metafields
           .filter((i) => i.key.indexOf(LOCK_METAFIELD_PREFIX) === 0)
           .map(({ id, value }) => {
