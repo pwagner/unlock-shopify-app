@@ -168,7 +168,6 @@ const getUnlockJavaScript = (discountCode) => {
   return uploadContent;
 };
 
-// Throttled API Request
 const deleteAsset = async (client, key) => {
   try {
     await client.delete({
@@ -349,27 +348,20 @@ app.prepare().then(async () => {
         const priceRules = priceRulesRes.body.price_rules;
         // console.log('priceRules', priceRules);
 
-        // Get discount_codes for each price_rule
-        await Promise.all(
-          priceRules.map(async ({ id }) => {
-            const discountsRes = await client.get({
-              path: `price_rules/${id}/discount_codes`,
-            });
-            console.log(
-              "discountsRes.body.discount_codes",
-              discountsRes.body.discount_codes
-            );
-            discountsRes.body.discount_codes.map(({ code }) => {
-              discounts.push(code);
-            });
+        const codes = priceRules
+          .filter(({ value_type, once_per_customer }) => {
+            if (["fixed_amount", "percentage"].indexOf(value_type) === -1)
+              return false;
 
-            return {
-              id,
-            };
+            // Only general discount codes are supported at the moment.
+            if (once_per_customer) return false;
+
+            return true;
           })
-        );
+          .map(({ title }) => title);
+        discounts.push(...codes);
 
-        console.log("discounts", discounts);
+        console.log("api/locks discounts", discounts);
         ctx.body = {
           status: "success",
           data: {
@@ -805,8 +797,8 @@ app.prepare().then(async () => {
         );
         console.log("Deleting assets", appAssets);
         appAssets.map(async ({ key }) => {
-          // Throttling due to Shopify API Request Limit of 2 per seconds
-          _.throttle(deleteAsset, 500)(client, key);
+          // FIXME: API rate limit of 2 per second
+          await deleteAsset(client, key);
         });
 
         ctx.body = {
