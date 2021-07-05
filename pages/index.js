@@ -126,7 +126,7 @@ class Index extends React.Component {
             )}
 
             {this.state.hasLoadedLocks && (
-              <div style={{ "padding-top": "24px" }}>
+              <div style={{ paddingTop: "24px" }}>
                 <hr />
                 <div style={{ margin: "24px 0" }}>
                   <DisplayText size="extraLarge">Memberships:</DisplayText>
