@@ -20,7 +20,7 @@
   cursor: pointer !important;
 }
 {%- endstyle -%}
-<div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section" onclick='window.showUnlockPaywall(__MEMBERSHIP_CONFIG__)'>
+<div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section" data-modal-target="#mb-modal" onclick='window.showMemberBenefitsModal(__MEMBERSHIP_CONNECT_OPTIONS__)'>
   {%- if section.settings.hero_layout == 'fixed_width' -%}
     <div class="page-width">
   {%- endif -%}
@@ -111,7 +111,7 @@
 
 {% schema %}
 {
-  "name": "MB __MEMBERSHIP_NAME__ - Hero",
+  "name": "MB Hero - __MEMBERSHIP_NAME__",
   "class": "index-section index-section--flush",
   "settings": [
     {
@@ -689,7 +689,7 @@
   ],
   "presets": [
     {
-      "name": "MB __MEMBERSHIP_NAME__ - Hero",
+      "name": "MB Hero - __MEMBERSHIP_NAME__",
       "category": {
         "en": "Promotional"
       }

@@ -1,0 +1,113 @@
+import React, { useState, useCallback } from "react";
+import { Banner, Button, Stack, Tag, TextField } from "@shopify/polaris";
+
+const LockMultiAdder = ({ name, lockAddresses }) => {
+  const [selectedOptions, setSelectedOptions] = useState(lockAddresses);
+  const [inputValue, setInputValue] = useState("");
+  const [lockHintDismissed, setLockHintDismissed] = useState(false);
+
+  const updateText = useCallback((value) => {
+    setInputValue(value);
+  }, []);
+
+  const removeTag = useCallback(
+    (tag) => () => {
+      const options = [...selectedOptions];
+      options.splice(options.indexOf(tag), 1);
+      setSelectedOptions(options);
+    },
+    [selectedOptions]
+  );
+
+  const handleAddAddress = useCallback(() => {
+    setSelectedOptions([...selectedOptions, inputValue]);
+    setInputValue("");
+  });
+
+  const handleDismissLockHint = useCallback(() => {
+    console.log("handleDismissLockHint");
+    setLockHintDismissed(true);
+  });
+
+  const hasSelectedOptions = selectedOptions.length > 0;
+
+  const tagsMarkup = hasSelectedOptions
+    ? selectedOptions.map((option) => {
+        let tagLabel = "";
+        tagLabel = option.replace("_", " ");
+        tagLabel = titleCase(tagLabel);
+        return (
+          <Tag key={`option${option}`} onRemove={removeTag(option)}>
+            {tagLabel}
+          </Tag>
+        );
+      })
+    : null;
+
+  const selectedTagMarkup = hasSelectedOptions ? (
+    <Stack spacing="extraTight">{tagsMarkup}</Stack>
+  ) : (
+    <Banner
+      title="Add the first lock associated with this membership below"
+      status="warning"
+    />
+  );
+
+  const unlockDashboardLinkMarkup =
+    !lockHintDismissed && !hasSelectedOptions ? (
+      <div>
+        <br />
+        <Banner
+          title="No Lock?"
+          status="info"
+          onDismiss={handleDismissLockHint}
+        >
+          <p>
+            You can create your own locks in the{" "}
+            <a href="https://app.unlock-protocol.com/dashboard" target="_blank">
+              Unlock Protocol Dashboard
+            </a>
+            .
+          </p>
+        </Banner>
+      </div>
+    ) : null;
+
+  return (
+    <div>
+      <input
+        type="hidden"
+        name={name}
+        value={JSON.stringify(selectedOptions)}
+      />
+
+      <Stack vertical>
+        <b>Unlock Protocol Locks:</b>
+        {selectedTagMarkup}
+        <TextField
+          onChange={updateText}
+          value={inputValue}
+          placeholder="E.g. 0x0b74E0ff5B61a16e94a5A29938d4Ea149CcD1619"
+          connectedRight={<Button onClick={handleAddAddress}>Add</Button>}
+          helpText="Enter the smart contract address (Ethereum, XDai, or Polygon)."
+          label="Address"
+          prefix="Address:"
+          labelHidden
+        />
+      </Stack>
+      {unlockDashboardLinkMarkup}
+    </div>
+  );
+
+  function titleCase(string) {
+    return string
+      .toLowerCase()
+      .split(" ")
+      .map((word) => {
+        return word.replace(word[0], word[0].toUpperCase());
+      })
+      .join(" ");
+  }
+};
+
+export { LockMultiAdder };

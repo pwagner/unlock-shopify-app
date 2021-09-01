@@ -9,8 +9,6 @@ import {
   Button,
   InlineError,
   Card,
-  TextStyle,
-  Heading,
   Link,
   Banner,
   DisplayText,
@@ -30,8 +28,9 @@ class Index extends React.Component {
     this.state = {
       locks: [],
       discounts: [],
-      newLockAddr: "",
-      newLockAddrError: false,
+      newMembershipName: "",
+      newMembershipNameError: false,
+      isContinueing: false,
       isLoading: false,
       isAddingMembership: false,
       hasLoadedLocks: false,
@@ -42,7 +41,7 @@ class Index extends React.Component {
     const app = this.context;
     this.redirect = Redirect.create(app);
     this.fetchWithAuth = authenticatedFetch(app);
-    this.loadLocks();
+    this.loadMemberships();
   }
 
   render() {
@@ -54,11 +53,35 @@ class Index extends React.Component {
             title="Step 1: Setup Memperships"
             description="Add memberships to your shop, and reward members with discounts."
           >
+            <div style={{ marginBottom: "12px" }}>
+              <DisplayText size="extraLarge">Memberships:</DisplayText>
+            </div>
+
+            {!this.state.isAddingMembership &&
+            this.state.hasLoadedLocks &&
+            this.state.locks.length === 0 ? (
+              <div style={{ marginBottom: "12px" }}>
+                <Banner>Click the button to add your first membership.</Banner>
+              </div>
+            ) : (
+              this.state.locks.map((value, index) => (
+                <MembershipForm
+                  value={value}
+                  discounts={this.state.discounts}
+                  index={index + 1}
+                  key={value.metafieldId}
+                  onSave={this.handleSaveMembership}
+                  onDelete={this.handleDeleteMembership}
+                  isLoading={this.state.isLoading}
+                />
+              ))
+            )}
+
             {this.state.hasLoadedLocks ? (
               this.state.isAddingMembership ? (
                 <Card sectioned>
                   <div style={{ float: "left" }}>
-                    <h2 className="Polaris-Heading">Add Membership</h2>
+                    <h2 className="Polaris-Heading">New Membership</h2>
                   </div>
                   <Stack distribution="trailing">
                     <Button small onClick={this.cancelAddMembership}>
@@ -68,88 +91,50 @@ class Index extends React.Component {
                   <br />
                   <Form onSubmit={this.handleContinue}>
                     <FormLayout>
-                      {this.state.newLockAddrError && (
+                      {this.state.newMembershipNameError && (
                         <InlineError
-                          message={this.state.newLockAddrError}
-                          id="lockAddrError"
+                          message={this.state.newMembershipNameError}
+                          id="membershipNameError"
                         />
                       )}
                       <TextField
-                        id="lockAddr"
-                        label="Lock smart contract address"
-                        value={this.state.newLockAddr}
-                        onChange={(val) => this.validateAddr(val)}
-                        aria-describedby="lockAddrError"
-                        helpText="Example: 0x0b74E0ff5B61a16e94a5A29938d4Ea149CcD1619"
-                        placeholder="Enter the membership's lock address"
+                        id="membershipName"
+                        label="Membership Name"
+                        value={this.state.newMembershipName}
+                        onChange={this.validateMembershipName}
+                        aria-describedby="membershipNameError"
+                        helpText="In the next step you'll configure the benefit and criteria for membership."
+                        placeholder="Enter a unique name for the membership"
                       />
                       <Stack distribution="trailing">
                         <Button
                           primary
                           submit
                           disabled={
-                            this.state.newLockAddrError ||
-                            this.state.newLockAddr.length < 1
+                            this.state.newMembershipNameError ||
+                            this.state.newMembershipName.length < 1 ||
+                            this.state.isContinueing
                           }
                         >
-                          Continue
+                          {this.state.isContinueing ? "Saving..." : "Continue"}
                         </Button>
                       </Stack>
                     </FormLayout>
                   </Form>
-
-                  <TextStyle variation="subdued">
-                    <Heading>No Lock?</Heading>
-                    <p>
-                      You can create your own locks in the{" "}
-                      <a
-                        href="https://app.unlock-protocol.com/dashboard"
-                        target="_blank"
-                      >
-                        Unlock Protocol Dashboard
-                      </a>
-                      .
-                    </p>
-                  </TextStyle>
                 </Card>
               ) : (
-                <Button
-                  primary
-                  onClick={this.addMembership}
-                  disabled={!this.state.hasLoadedLocks}
-                >
-                  Add Membership
-                </Button>
+                <div style={{ marginTop: "12px" }}>
+                  <Button
+                    primary
+                    onClick={this.addMembership}
+                    disabled={!this.state.hasLoadedLocks}
+                  >
+                    New Membership
+                  </Button>
+                </div>
               )
             ) : (
               <Banner>Loading, please wait…</Banner>
-            )}
-
-            {this.state.hasLoadedLocks && (
-              <div style={{ paddingTop: "24px" }}>
-                <hr />
-                <div style={{ margin: "24px 0" }}>
-                  <DisplayText size="extraLarge">Memberships:</DisplayText>
-                </div>
-              </div>
-            )}
-
-            {this.state.hasLoadedLocks && this.state.locks.length === 0 ? (
-              <Banner>
-                Click the button on top to add your first membership
-              </Banner>
-            ) : (
-              this.state.locks.map((value, index) => (
-                <MembershipForm
-                  value={value}
-                  discounts={this.state.discounts}
-                  index={index + 1}
-                  key={value.metafieldId}
-                  onSave={this.handleSaveLock}
-                  onDelete={this.deleteLock}
-                  isLoading={this.state.isLoading}
-                />
-              ))
             )}
           </Layout.AnnotatedSection>
 
@@ -188,15 +173,17 @@ class Index extends React.Component {
       });
       const response = await resetRes.json();
       console.log("Deleted app resources", response);
-      await this.loadLocks();
+      await this.loadMemberships();
     } catch (err) {
       console.log("Error in reset", err);
     }
   };
 
-  loadLocks = async () => {
+  loadMemberships = async () => {
     try {
-      const lockRes = await this.fetchWithAuth(`/api/locks`, { method: "GET" });
+      const lockRes = await this.fetchWithAuth(`/api/memberships`, {
+        method: "GET",
+      });
       const response = await lockRes.json();
       console.log("locks response", response);
 
@@ -210,16 +197,17 @@ class Index extends React.Component {
         hasLoadedLocks: true,
       });
     } catch (err) {
-      console.log("Error in loadLocks", err);
+      console.log("Error in loadMemberships", err);
     }
   };
 
   handleContinue = async () => {
+    this.setState({ isContinueing: true });
     try {
-      const saveRes = await this.fetchWithAuth("/api/addLock", {
+      const saveRes = await this.fetchWithAuth("/api/addMembership", {
         method: "POST",
         body: JSON.stringify({
-          lockAddr: this.state.newLockAddr,
+          lockName: this.state.newMembershipName,
         }),
       });
       const result = await saveRes.json();
@@ -234,20 +222,22 @@ class Index extends React.Component {
           ...this.state.locks,
           {
             metafieldId,
-            address: this.state.newLockAddr,
+            lockName: this.state.newMembershipName,
           },
         ],
       });
       this.setState({
-        newLockAddr: "",
+        newMembershipName: "",
         isAddingMembership: false,
+        isContinueing: false,
       });
     } catch (err) {
+      this.setState({ isContinueing: false });
       console.log("Error in handleContinue:", err);
     }
   };
 
-  handleSaveLock = async (e) => {
+  handleSaveMembership = async (e) => {
     this.setState({ isLoading: true });
     try {
       const otherLocks = this.state.locks
@@ -255,20 +245,22 @@ class Index extends React.Component {
           ({ metafieldId }) =>
             metafieldId != e.target.elements.metafieldId.value
         )
-        .map(({ networkId, name, address }) => ({ networkId, name, address }));
+        .map(({ lockName, lockAddresses }) => ({ lockName, lockAddresses }));
       const metafieldId = e.target.elements.metafieldId.value;
-      const address = e.target.elements.lockAddress.value;
-      const name = e.target.elements.name.value;
+
+      const lockName = e.target.elements.lockName.value;
+      // const address = e.target.elements.lockAddress.value;
+      const lockAddresses = JSON.parse(e.target.elements.lockAddresses.value);
+      console.log("handleSaveMembership lockAddresses", lockAddresses);
+
       const isEnabled = e.target.elements.enabled.checked;
-      const networkId = parseInt(e.target.elements.networkId.value);
       const discountId = e.target.elements.discountId.value;
-      const saveRes = await this.fetchWithAuth("/api/saveLock", {
+      const saveRes = await this.fetchWithAuth("/api/saveMembership", {
         method: "POST",
         body: JSON.stringify({
-          address,
-          name,
+          lockAddresses,
+          lockName,
           isEnabled,
-          networkId,
           discountId,
           metafieldId,
           otherLocks,
@@ -283,16 +275,16 @@ class Index extends React.Component {
       if (scriptTagId) {
         console.log("Active scriptTag ID:", scriptTagId);
       }
-      await this.loadLocks();
+      await this.loadMemberships();
     } catch (err) {
-      console.log("Error in handleSaveLock:", err);
+      console.log("Error in handleSaveMembership:", err);
     }
     this.setState({ isLoading: false });
   };
 
-  deleteLock = async (lockAddress, metafieldId) => {
+  handleDeleteMembership = async (name, metafieldId) => {
     try {
-      const saveRes = await this.fetchWithAuth("/api/removeLock", {
+      const saveRes = await this.fetchWithAuth("/api/removeMembership", {
         method: "POST",
         body: JSON.stringify({
           metafieldId,
@@ -303,32 +295,18 @@ class Index extends React.Component {
         throw result.errors;
       }
       this.setState({
-        locks: this.state.locks.filter(
-          ({ address }) => address !== lockAddress
-        ),
+        locks: this.state.locks.filter(({ lockName }) => lockName !== name),
       });
     } catch (err) {
-      console.log("Error in deleteLock:", err);
+      console.log("Error in handleDeleteMembership:", err);
     }
   };
 
-  validateAddr = (addr) => {
-    this.setState({ newLockAddr: addr });
-    if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) {
-      this.setState({
-        newLockAddrError: "Pattern not recognized as valid Ethereum address.",
-      });
-      return;
-    }
+  validateMembershipName = (name) => {
+    this.setState({ newMembershipName: name });
+    if (name.length > 0) return;
 
-    const hasLock = this.state.locks.find(({ address }) => address === addr);
-    if (hasLock) {
-      this.setState({ newLockAddrError: "This lock address already exists." });
-      return;
-    }
-
-    console.log("false");
-    this.setState({ newLockAddrError: false });
+    this.setState({ newMembershipNameError: false });
   };
 
   addMembership = () => {
