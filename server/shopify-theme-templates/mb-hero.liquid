@@ -19,8 +19,89 @@
 .hero__inner {
   cursor: pointer !important;
 }
-{%- endstyle -%}
-<div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section" data-modal-target="#mb-modal" onclick='window.showMemberBenefitsModal(__MEMBERSHIP_CONNECT_OPTIONS__)'>
+
+
+.mb-modal {
+  position: fixed;
+  top: 220px;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: 200ms ease-in-out;
+  border: 1px solid black;
+  border-radius: 10px;
+  z-index: 2;
+  background-color: white;
+  width: 500px;
+  max-width: 80%;
+}
+
+.mb-modal.active {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.mb-modal-header {
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid black;
+}
+
+.mb-modal-header .title {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.mb-modal-header .close-button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.mb-modal-body {
+  padding: 10px 15px;
+}
+
+#overlay {
+  position: fixed;
+  opacity: 0;
+  transition: 200ms ease-in-out;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, .5);
+  pointer-events: none;
+}
+
+#overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+
+.table-memberships {
+  margin-top: 2em;
+}
+
+#btn-connect, #btn-disconnect {
+  margin: 1em auto;
+  display: block;
+}
+
+#selected-account {
+  font-family: Courier,monospace;
+  font-size: 12px;
+}
+
+{% endstyle %}
+
+
+<div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section" data-modal-target="#mb-modal"
+  onclick='window.showMemberBenefitsModal([{name: "{{ section.settings.membership }}",locks: window.locksByMembershipName["{{ section.settings.membership }}"]}])'>
   {%- if section.settings.hero_layout == 'fixed_width' -%}
     <div class="page-width">
   {%- endif -%}
@@ -111,9 +192,78 @@
 
 {% schema %}
 {
-  "name": "MB Hero - __MEMBERSHIP_NAME__",
+  "name": "MB|Hero",
   "class": "index-section index-section--flush",
   "settings": [
+    {
+      "type": "select",
+      "id": "membership",
+      "label": "Membership",
+      "options": __MEMBERSHIP_SECTION_SETTING_OPTIONS__,
+      "info": "Select memberships for this section"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": {
+        "cs": "Nadpis",
+        "da": "Overskrift",
+        "de": "Titel",
+        "en": "Heading",
+        "es": "Título",
+        "fi": "Otsake",
+        "fr": "En-tête",
+        "hi": "शीर्षक",
+        "it": "Heading",
+        "ja": "見出し",
+        "ko": "제목",
+        "nb": "Overskrift",
+        "nl": "Kop",
+        "pl": "Nagłówek",
+        "pt-BR": "Título",
+        "pt-PT": "Título",
+        "sv": "Rubrik",
+        "th": "ส่วนหัว",
+        "tr": "Başlık",
+        "vi": "Tiêu đề",
+        "zh-CN": "标题",
+        "zh-TW": "標題"
+      },
+      "default": {
+        "en": "Membership"
+      }
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": {
+        "cs": "Text",
+        "da": "Tekst",
+        "de": "Text",
+        "en": "Text",
+        "es": "Texto",
+        "fi": "Teksti",
+        "fr": "Texte",
+        "hi": "टेक्स्ट",
+        "it": "Testo",
+        "ja": "テキスト",
+        "ko": "텍스트",
+        "nb": "Tekst",
+        "nl": "Tekst",
+        "pl": "Tekst",
+        "pt-BR": "Texto",
+        "pt-PT": "Texto",
+        "sv": "Text",
+        "th": "ข้อความ",
+        "tr": "Metin",
+        "vi": "Văn bản",
+        "zh-CN": "文本",
+        "zh-TW": "文字"
+      },
+      "default": {
+        "en": "<p>Use overlay text to give your customers insight into your membership offering.</p>"
+      }
+    },
     {
       "type": "image_picker",
       "id": "image",
@@ -618,68 +768,6 @@
       ]
     },
     {
-      "type": "text",
-      "id": "title",
-      "label": {
-        "cs": "Nadpis",
-        "da": "Overskrift",
-        "de": "Titel",
-        "en": "Heading",
-        "es": "Título",
-        "fi": "Otsake",
-        "fr": "En-tête",
-        "hi": "शीर्षक",
-        "it": "Heading",
-        "ja": "見出し",
-        "ko": "제목",
-        "nb": "Overskrift",
-        "nl": "Kop",
-        "pl": "Nagłówek",
-        "pt-BR": "Título",
-        "pt-PT": "Título",
-        "sv": "Rubrik",
-        "th": "ส่วนหัว",
-        "tr": "Başlık",
-        "vi": "Tiêu đề",
-        "zh-CN": "标题",
-        "zh-TW": "標題"
-      },
-      "default": {
-        "en": "Membership __MEMBERSHIP_NAME__"
-      }
-    },
-    {
-      "type": "richtext",
-      "id": "text",
-      "label": {
-        "cs": "Text",
-        "da": "Tekst",
-        "de": "Text",
-        "en": "Text",
-        "es": "Texto",
-        "fi": "Teksti",
-        "fr": "Texte",
-        "hi": "टेक्स्ट",
-        "it": "Testo",
-        "ja": "テキスト",
-        "ko": "텍스트",
-        "nb": "Tekst",
-        "nl": "Tekst",
-        "pl": "Tekst",
-        "pt-BR": "Texto",
-        "pt-PT": "Texto",
-        "sv": "Text",
-        "th": "ข้อความ",
-        "tr": "Metin",
-        "vi": "Văn bản",
-        "zh-CN": "文本",
-        "zh-TW": "文字"
-      },
-      "default": {
-        "en": "<p>Use overlay text to give your customers insight into your membership offering.</p>"
-      }
-    },
-    {
       "type": "checkbox",
       "id": "enable_hide_unlocked",
       "label": "Hidden if unlocked",
@@ -689,7 +777,7 @@
   ],
   "presets": [
     {
-      "name": "MB Hero - __MEMBERSHIP_NAME__",
+      "name": "MB|Hero",
       "category": {
         "en": "Promotional"
       }

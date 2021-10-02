@@ -1,13 +1,34 @@
 import React, { useState, useCallback } from "react";
-import { Banner, Button, Stack, Tag, TextField } from "@shopify/polaris";
+import {
+  Banner,
+  Button,
+  Stack,
+  Tag,
+  TextField,
+  InlineError,
+} from "@shopify/polaris";
 
-const LockMultiAdder = ({ name, lockAddresses }) => {
+const LockMultiAdder = ({
+  name,
+  lockAddresses,
+  otherMembershipLockAddresses,
+}) => {
   const [selectedOptions, setSelectedOptions] = useState(lockAddresses);
   const [inputValue, setInputValue] = useState("");
+  const [isValidAddress, setIsValidAddress] = useState(true);
+  const [isDuplicateAddress, setIsDuplicateAddress] = useState(false);
   const [lockHintDismissed, setLockHintDismissed] = useState(false);
+
+  const validateAddress = (string) => string.match(/^0x[a-fA-F0-9]{40}$/);
 
   const updateText = useCallback((value) => {
     setInputValue(value);
+    if (value === "") {
+      setIsValidAddress(true);
+    } else {
+      setIsValidAddress(validateAddress(value));
+    }
+    setIsDuplicateAddress(false);
   }, []);
 
   const removeTag = useCallback(
@@ -20,8 +41,20 @@ const LockMultiAdder = ({ name, lockAddresses }) => {
   );
 
   const handleAddAddress = useCallback(() => {
-    setSelectedOptions([...selectedOptions, inputValue]);
+    console.log("otherMembershipLockAddresses", otherMembershipLockAddresses);
+
+    if (otherMembershipLockAddresses.indexOf(inputValue) > -1) {
+      setIsDuplicateAddress(true);
+
+      return;
+    }
+
+    if (selectedOptions.indexOf(inputValue) === -1) {
+      setSelectedOptions([...selectedOptions, inputValue]);
+    }
+
     setInputValue("");
+    setIsDuplicateAddress(false);
   });
 
   const handleDismissLockHint = useCallback(() => {
@@ -35,7 +68,6 @@ const LockMultiAdder = ({ name, lockAddresses }) => {
     ? selectedOptions.map((option) => {
         let tagLabel = "";
         tagLabel = option.replace("_", " ");
-        tagLabel = titleCase(tagLabel);
         return (
           <Tag key={`option${option}`} onRemove={removeTag(option)}>
             {tagLabel}
@@ -88,26 +120,35 @@ const LockMultiAdder = ({ name, lockAddresses }) => {
           onChange={updateText}
           value={inputValue}
           placeholder="E.g. 0x0b74E0ff5B61a16e94a5A29938d4Ea149CcD1619"
-          connectedRight={<Button onClick={handleAddAddress}>Add</Button>}
+          connectedRight={
+            <Button
+              disabled={!isValidAddress || inputValue.length === 0}
+              onClick={handleAddAddress}
+            >
+              Add
+            </Button>
+          }
           helpText="Enter the smart contract address (Ethereum, XDai, or Polygon)."
           label="Address"
           prefix="Address:"
           labelHidden
         />
       </Stack>
+      {isDuplicateAddress && (
+        <InlineError
+          message="This lock address is already associated with an existing membership"
+          id="lockAddressDuplicateError"
+        />
+      )}
+      {!isValidAddress && (
+        <InlineError
+          message="Invalid pattern for lock address"
+          id="lockAddressValidationError"
+        />
+      )}
       {unlockDashboardLinkMarkup}
     </div>
   );
-
-  function titleCase(string) {
-    return string
-      .toLowerCase()
-      .split(" ")
-      .map((word) => {
-        return word.replace(word[0], word[0].toUpperCase());
-      })
-      .join(" ");
-  }
 };
 
 export { LockMultiAdder };

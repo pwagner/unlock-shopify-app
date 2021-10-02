@@ -14,7 +14,16 @@ import { LockMultiAdder } from "./LockMultiAdder";
 
 const MembershipForm = forwardRef(
   (
-    { id, value, discounts, index, onSave, onDelete, isLoading, ...props },
+    {
+      id,
+      value,
+      discounts,
+      index,
+      onSave,
+      onDelete,
+      isLoading,
+      otherMembershipLockAddresses,
+    },
     ref
   ) => {
     return (
@@ -53,6 +62,7 @@ const MembershipForm = forwardRef(
             <LockMultiAdder
               name="lockAddresses"
               lockAddresses={(value && value.lockAddresses) || []}
+              otherMembershipLockAddresses={otherMembershipLockAddresses || []}
             />
 
             <IsEnabledCheckbox

@@ -26,7 +26,7 @@ class Index extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      locks: [],
+      memberships: [],
       discounts: [],
       newMembershipName: "",
       newMembershipNameError: false,
@@ -59,12 +59,12 @@ class Index extends React.Component {
 
             {!this.state.isAddingMembership &&
             this.state.hasLoadedLocks &&
-            this.state.locks.length === 0 ? (
+            this.state.memberships.length === 0 ? (
               <div style={{ marginBottom: "12px" }}>
                 <Banner>Click the button to add your first membership.</Banner>
               </div>
             ) : (
-              this.state.locks.map((value, index) => (
+              this.state.memberships.map((value, index) => (
                 <MembershipForm
                   value={value}
                   discounts={this.state.discounts}
@@ -73,6 +73,17 @@ class Index extends React.Component {
                   onSave={this.handleSaveMembership}
                   onDelete={this.handleDeleteMembership}
                   isLoading={this.state.isLoading}
+                  otherMembershipLockAddresses={this.state.memberships.reduce(
+                    (acc, { lockAddresses }) => {
+                      if (!lockAddresses || lockAddresses.length < 1)
+                        return acc;
+
+                      lockAddresses.map((addr) => acc.push(addr));
+
+                      return acc;
+                    },
+                    []
+                  )}
                 />
               ))
             )}
@@ -138,7 +149,7 @@ class Index extends React.Component {
             )}
           </Layout.AnnotatedSection>
 
-          {this.state.locks.length > 0 && (
+          {this.state.memberships.length > 0 && (
             <Layout.AnnotatedSection
               title="Step 2: Publish Member Benefits"
               description="Show your customers what benefits await them, if they get a membership."
@@ -148,7 +159,7 @@ class Index extends React.Component {
                   Add sections to your theme in your Online Store settings under{" "}
                   <Link onClick={this.handleThemeClick}>Themes: Customize</Link>{" "}
                   <br />
-                  You'll find the "MB -" sections in the <b>Promotional</b>{" "}
+                  You'll find the "MB|"-sections in the <b>Promotional</b>{" "}
                   category. There are currently hero and top-bar sections.
                 </p>
               </Card>
@@ -192,7 +203,7 @@ class Index extends React.Component {
       }
 
       this.setState({
-        locks: response.data.locks,
+        memberships: response.data.memberships,
         discounts: response.data.discounts,
         hasLoadedLocks: true,
       });
@@ -218,8 +229,8 @@ class Index extends React.Component {
 
       const { metafieldId } = result.data;
       this.setState({
-        locks: [
-          ...this.state.locks,
+        memberships: [
+          ...this.state.memberships,
           {
             metafieldId,
             lockName: this.state.newMembershipName,
@@ -240,12 +251,16 @@ class Index extends React.Component {
   handleSaveMembership = async (e) => {
     this.setState({ isLoading: true });
     try {
-      const otherLocks = this.state.locks
+      const otherMemberships = this.state.memberships
         .filter(
           ({ metafieldId }) =>
             metafieldId != e.target.elements.metafieldId.value
         )
-        .map(({ lockName, lockAddresses }) => ({ lockName, lockAddresses }));
+        .map(({ lockName, lockAddresses, discountId }) => ({
+          lockName,
+          lockAddresses,
+          discountId,
+        }));
       const metafieldId = e.target.elements.metafieldId.value;
 
       const lockName = e.target.elements.lockName.value;
@@ -255,16 +270,21 @@ class Index extends React.Component {
 
       const isEnabled = e.target.elements.enabled.checked;
       const discountId = e.target.elements.discountId.value;
+
+      const membershipDetails = {
+        lockAddresses,
+        lockName,
+        isEnabled,
+        discountId,
+        metafieldId,
+        otherMemberships,
+      };
+
+      console.log("membershipDetails", membershipDetails);
+
       const saveRes = await this.fetchWithAuth("/api/saveMembership", {
         method: "POST",
-        body: JSON.stringify({
-          lockAddresses,
-          lockName,
-          isEnabled,
-          discountId,
-          metafieldId,
-          otherLocks,
-        }),
+        body: JSON.stringify(membershipDetails),
       });
       const result = await saveRes.json();
       if (result.status !== "success" || !result.data) {
@@ -295,7 +315,9 @@ class Index extends React.Component {
         throw result.errors;
       }
       this.setState({
-        locks: this.state.locks.filter(({ lockName }) => lockName !== name),
+        memberships: this.state.memberships.filter(
+          ({ lockName }) => lockName !== name
+        ),
       });
     } catch (err) {
       console.log("Error in handleDeleteMembership:", err);

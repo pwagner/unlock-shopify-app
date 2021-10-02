@@ -43,10 +43,6 @@
 
 
 
-*, *::after, *::before {
-  box-sizing: border-box;
-}
-
 .mb-modal {
   position: fixed;
   top: 220px;
@@ -55,7 +51,7 @@
   transition: 200ms ease-in-out;
   border: 1px solid black;
   border-radius: 10px;
-  z-index: 10;
+  z-index: 2;
   background-color: white;
   width: 500px;
   max-width: 80%;
@@ -126,11 +122,6 @@
 {% endstyle %}
 
 
-{% if section.settings.home_page_only == false or template.name == 'index' %}
-<script>
-    var locksByMembershipName = __LOCKS_BY_NAME__;
-</script>
-
 {% capture on_click_script %}
 window.showMemberBenefitsModal([
   {% for block in section.blocks %}
@@ -138,7 +129,7 @@ window.showMemberBenefitsModal([
     {% when 'lock' %}
       {
         name: "{{ block.settings.membership }}",
-        locks: locksByMembershipName["{{ block.settings.membership }}"]
+        locks: window.locksByMembershipName["{{ block.settings.membership }}"]
       }
       {% if forloop.last != true %},{% endif %}
     {% endcase %}
@@ -160,23 +151,15 @@ window.showMemberBenefitsModal([
 
 </div>
 
-{% endif %}
-
 {% schema %}
 {
-  "name": "MB - Top-bar",
+  "name": "MB|Top-bar",
   "settings": [
     {
       "type": "checkbox",
       "id": "enable_hide_unlocked",
       "label": "Hidden if unlocked",
       "info": "If enabled, the top-bar will not be displayed to members.",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "home_page_only",
-      "label": "Only on home page",
       "default": true
     },
     {
@@ -229,7 +212,7 @@ window.showMemberBenefitsModal([
             "type": "select",
             "id": "membership",
             "label": "Membership",
-            "options": __LOCK_OPTIONS__,
+            "options": __MEMBERSHIP_SECTION_SETTING_OPTIONS__,
             "info": "Select memberships for this section"
           }
         ]
@@ -237,7 +220,7 @@ window.showMemberBenefitsModal([
   ],
   "presets": [
     {
-      "name": "MB - Top-bar",
+      "name": "MB|Top-bar",
       "category": {
         "en": "Promotional"
       },

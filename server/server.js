@@ -3,7 +3,7 @@ import "@babel/polyfill";
 import dotenv from "dotenv";
 import "isomorphic-fetch";
 import createShopifyAuth, { verifyRequest } from "@shopify/koa-shopify-auth";
-import Shopify, { ApiVersion } from "@shopify/shopify-api";
+import Shopify from "@shopify/shopify-api";
 import Koa from "koa";
 import next from "next";
 import Router from "koa-router";
@@ -30,7 +30,7 @@ if (process.env.REDISTOGO_URL) {
 }
 
 // These theme assets (in "assets") get deleted on reset (as opposed to theme sections, e.g. membership hero)
-const ASSET_KEY_PREFIX = "unlock-member-benefits";
+const SCRIPT_ASSET_KEY = "memberbenefits.js";
 const LOCK_METAFIELD_PREFIX = "lock";
 const LOCKDETAILS_METAFIELD_PREFIX = "info";
 const METAFIELD_NAMESPACE = "umb";
@@ -55,7 +55,7 @@ Shopify.Context.initialize({
   API_SECRET_KEY: SHOPIFY_API_SECRET,
   SCOPES: SCOPES.split(","),
   HOST_NAME: HOST.replace(/https:\/\//, ""),
-  API_VERSION: ApiVersion.April21,
+  API_VERSION: "2021-10", // Shopify.ApiVersion.October21
   IS_EMBEDDED_APP: true,
   SESSION_STORAGE: new Shopify.Session.CustomSessionStorage(
     sessionStorage.storeCallback,
@@ -73,22 +73,45 @@ const loadActiveShopsFromStorage = async () => {
   return activeShops || {};
 };
 
-const getAssetKey = (metafieldId) =>
-  `assets/${ASSET_KEY_PREFIX}-${metafieldId}.js`;
+const getMembershipSettingOptions = (memberships) =>
+  memberships.map(({ lockName }) => ({
+    value: lockName,
+    label: lockName,
+  }));
+
+const getLocksByMembershipName = (memberships) => {
+  const locksByName = {};
+  memberships.map(({ lockName, lockAddresses }) => {
+    if (!locksByName[lockName]) {
+      locksByName[lockName] = lockAddresses;
+    }
+  });
+
+  return locksByName;
+};
 
 // Get content of theme section liquid file
-const getHeroSectionCode = (lockAddresses, name) => {
+const getHeroSectionCode = (lockAddresses, name, otherMemberships) => {
   const fileContent = fs.readFileSync(
     `${__dirname}/shopify-theme-templates/mb-hero.liquid`,
     { encoding: "utf8", flag: "r" }
   );
+
+  const membershipSettingOptions = getMembershipSettingOptions([
+    { lockName: name },
+    ...otherMemberships,
+  ]);
+  const locksByMembershipName = getLocksByMembershipName([
+    { lockName: name, lockAddresses },
+    ...otherMemberships,
+  ]);
+
   const liquidString = fileContent
-    .replace(/__MEMBERSHIP_NAME__/g, `${name}`)
     .replace(
-      /__MEMBERSHIP_CONNECT_OPTIONS__/g,
-      JSON.stringify([{ name, locks: lockAddresses }])
-    );
-  console.log("getHeroSectionCode", liquidString);
+      /__MEMBERSHIP_SECTION_SETTING_OPTIONS__/g,
+      JSON.stringify(membershipSettingOptions)
+    )
+    .replace(/__LOCKS_BY_NAME__/g, JSON.stringify(locksByMembershipName));
 
   return liquidString;
 };
@@ -97,63 +120,69 @@ const getTopbarSectionCode = (
   sectionTemplateName,
   lockAddresses,
   name,
-  otherLocks
+  otherMemberships
 ) => {
   const fileContent = fs.readFileSync(
     `${__dirname}/shopify-theme-templates/${sectionTemplateName}`,
     { encoding: "utf8", flag: "r" }
   );
 
-  const lockOptions = [
-    {
-      value: name,
-      label: name,
-    },
-  ];
-
-  // JSON encoded lock addresses for use in liquid template
-  const locksByName = {
-    [name]: lockAddresses,
-  };
-
-  otherLocks.map(({ lockName, lockAddresses }) => {
-    lockOptions.push({
-      value: lockName,
-      label: lockName,
-    });
-    if (!locksByName[lockName]) {
-      locksByName[lockName] = lockAddresses;
-    }
-  });
+  const membershipSettingOptions = getMembershipSettingOptions([
+    { lockName: name },
+    ...otherMemberships,
+  ]);
+  const locksByMembershipName = getLocksByMembershipName([
+    { lockName: name, lockAddresses },
+    ...otherMemberships,
+  ]);
 
   const liquidString = fileContent
-    .replace(/__LOCK_OPTIONS__/g, JSON.stringify(lockOptions))
-    .replace(/__LOCKS_BY_NAME__/g, JSON.stringify(locksByName))
+    .replace(
+      /__MEMBERSHIP_SECTION_SETTING_OPTIONS__/g,
+      JSON.stringify(membershipSettingOptions)
+    )
+    .replace(/__LOCKS_BY_NAME__/g, JSON.stringify(locksByMembershipName))
     .replace(
       /__LOCK_VALUES__/g,
-      JSON.stringify(lockOptions.map(({ value }) => value)[0]) // TODO: pre-select multiple locks?
+      JSON.stringify(membershipSettingOptions.map(({ value }) => value)[0]) // TODO: pre-select multiple locks?
     );
-  console.log("getTopbarSectionCode", liquidString);
 
   return liquidString;
 };
 
 // Get content for the public JS asset for this member benefit
-const getMemberBenefitsJS = (discountCode, lockAddresses, membershipName) => {
-  const locksByDiscount = { [discountCode]: lockAddresses };
-
+const getMemberBenefitsJS = (
+  discountCode,
+  lockAddresses,
+  membershipName,
+  otherMemberships
+) => {
+  const locksByMembershipName = getLocksByMembershipName([
+    { lockName: membershipName, lockAddresses },
+    ...otherMemberships,
+  ]);
+  const discountCodesByLockAddresses = {};
+  lockAddresses.map((addr) => {
+    discountCodesByLockAddresses[addr] = discountCode;
+  });
+  otherMemberships.map(({ discountId, lockAddresses }) => {
+    lockAddresses.map((addr) => {
+      discountCodesByLockAddresses[addr] = discountId;
+    });
+  });
   const fileContent = fs.readFileSync(
     `${__dirname}/shopify-theme-templates/memberbenefits.js`,
     { encoding: "utf8", flag: "r" }
   );
   const uploadContent = fileContent
     .replace(/__SHOP__/g, SHOP)
-    .replace(/__DISCOUNT_CODE__/g, discountCode)
-    .replace(/__LOCK_ADDRESSES__/g, JSON.stringify(lockAddresses))
-    .replace(/__MEMBERSHIP_NAME__/g, membershipName);
+    .replace(
+      /__DISCOUNT_CODE_BY_LOCK_ADDRESS__/g,
+      JSON.stringify(discountCodesByLockAddresses)
+    )
+    .replace(/__LOCKS_BY_NAME__/g, JSON.stringify(locksByMembershipName));
 
-  console.log("memberbenefits.s js uploadContent", uploadContent);
-
+  console.log("memberbenefits.js uploadContent", uploadContent);
   return uploadContent;
 };
 
@@ -296,7 +325,8 @@ app.prepare().then(async () => {
         const metafieldsRes = await client.get({
           path: "metafields",
         });
-        const locks = metafieldsRes.body.metafields
+
+        const memberships = metafieldsRes.body.metafields
           .filter((i) => i.key.indexOf(LOCK_METAFIELD_PREFIX) === 0)
           .map(({ id, value }) => {
             // Add details to locks if available
@@ -343,7 +373,7 @@ app.prepare().then(async () => {
         ctx.body = {
           status: "success",
           data: {
-            locks,
+            memberships,
             discounts,
           },
         };
@@ -390,7 +420,7 @@ app.prepare().then(async () => {
               namespace: METAFIELD_NAMESPACE,
               key: lockMetafieldKey,
               value: lockName,
-              value_type: "string",
+              type: "single_line_text_field",
             },
           },
           type: "application/json",
@@ -478,18 +508,22 @@ app.prepare().then(async () => {
         }
 
         // Delete script asset
+        // TODO: Only if this is the last membership to be deleted
         await client.delete({
           path: "assets",
-          query: { "asset[key]": getAssetKey(metafieldId) },
+          query: { "asset[key]": `assets/${SCRIPT_ASSET_KEY}.js` },
         });
 
         // Delete hero theme section template
+        // TODO: Only if this is the last membership to be deleted
+        /*
         await client.delete({
           path: "assets",
           query: { "asset[key]": `sections/mb-hero-${metafieldId}.liquid` },
         });
+        */
 
-        // TODO: Update lock blocks of multi-lock theme sections (e.g. topbar)
+        // TODO: Update locks in theme sections (e.g. hero, blocks in topbar)
 
         ctx.body = {
           status: "success",
@@ -530,37 +564,38 @@ app.prepare().then(async () => {
         lockName,
         isEnabled,
         discountId,
-        otherLocks,
+        otherMemberships,
       } = payload;
 
       const lockDetailsKey = `${LOCKDETAILS_METAFIELD_PREFIX}${metafieldId}`;
       console.log("lockDetailsKey", lockDetailsKey);
+      console.log("otherMemberships", otherMemberships);
 
       // Lock must create theme section assets:
 
       // 1) Hero
       console.log("Creating Hero asset");
       try {
-        const sectionName = `mb-hero-${metafieldId}.liquid`;
+        const sectionName = `mb-hero.liquid`;
         const assetsRes = await client.put({
           path: "assets",
           data: {
             asset: {
               key: `sections/${sectionName}`,
-              value: getHeroSectionCode(lockAddresses, lockName),
+              value: getHeroSectionCode(
+                lockAddresses,
+                lockName,
+                otherMemberships
+              ),
             },
           },
           type: "application/json",
         });
+
         if (!assetsRes.body.asset) {
           console.log("Invalid put assetsRes", sectionName, assetsRes);
           throw "Missing asset.public_url";
         }
-        // console.log(
-        //   "New assetsRes.body.asset",
-        //   sectionName,
-        //   assetsRes.body.asset
-        // );
       } catch (err) {
         console.log(
           "Error trying to save Hero theme section in saveMembership, err json:",
@@ -582,7 +617,7 @@ app.prepare().then(async () => {
           sectionName,
           lockAddresses,
           lockName,
-          otherLocks
+          otherMemberships
         );
         const assetsRes = await client.put({
           path: "assets",
@@ -611,82 +646,83 @@ app.prepare().then(async () => {
         return;
       }
 
-      // Lock must create the JS assets for the scriptTag src
-      console.log("Creating JS asset (for scriptTag)");
-      const assetKey = getAssetKey(metafieldId);
-      try {
-        const assetsRes = await client.get({
-          path: "assets",
-          query: { "asset[key]": assetKey },
-        });
-        // Throws invalid JSON error if it doesn't exist yet
-        if (!assetsRes.body.asset || !assetsRes.body.asset.public_url) {
-          console.log("Invalid get assetsRes", assetsRes);
-          throw "Missing asset.public_url";
-        }
-        console.log(
-          "Found existing assetsRes.body.asset",
-          assetsRes.body.asset
-        );
-      } catch (err) {
-        console.log("Error trying to get theme asset for scriptTag", err);
-        console.log(
-          "Presumably missing asset (ambiguous invalid json response), creating asset now"
-        );
-      }
-
-      try {
-        const assetsRes = await client.put({
-          path: "assets",
-          data: {
-            asset: {
-              key: assetKey,
-              value: getMemberBenefitsJS(discountId, lockAddresses, lockName),
-            },
-          },
-          type: "application/json",
-        });
-        if (!assetsRes.body.asset || !assetsRes.body.asset.public_url) {
-          console.log("Invalid put assetsRes", assetsRes);
-          throw "Missing asset.public_url";
-        }
-        console.log("New assetsRes.body.asset", assetsRes.body.asset);
-        scriptTagSrc = assetsRes.body.asset.public_url;
-
-        const detailsMetafieldRes = await client.get({
-          path: "metafields",
-          query: { key: lockDetailsKey },
-        });
-        console.log(
-          "detailsMetafieldRes.body.metafields",
-          detailsMetafieldRes.body.metafields
-        );
-
-        const { metafields } = detailsMetafieldRes.body;
-        if (metafields.length > 0) {
-          lockDetails = JSON.parse(metafields[0].value);
-          lockDetailsMetafieldId = metafields[0].id;
-          console.log("Lock details", lockDetails);
-
-          // Delete existing scriptTag
-          if (lockDetails.scriptTagId) {
-            await client.delete({
-              path: `script_tags/${lockDetails.scriptTagId}`,
-            });
-          }
-        }
-      } catch (err) {
-        console.log("Error in saveMembership", err);
-        ctx.body = {
-          status: "error",
-          errors: "Could not save membership.",
-        };
-
-        return;
-      }
-
-      // If the lock is enabled, add a scriptTag that loads the Member Benefits JS code.
+      // TODO: there only needs to be one scriptTag for all memberships
+      // If the membership is enabled, add its info to script
       if (isEnabled) {
+        console.log("Creating JS asset (for scriptTag)");
+        try {
+          const assetsRes = await client.get({
+            path: "assets",
+            query: { "asset[key]": `assets/${SCRIPT_ASSET_KEY}` },
+          });
+          // Throws invalid JSON error if it doesn't exist yet
+          if (!assetsRes.body.asset || !assetsRes.body.asset.public_url) {
+            console.log("Invalid get assetsRes", assetsRes);
+            throw "Missing asset.public_url";
+          }
+          console.log("Found existing assetsRes.body.asset");
+        } catch (err) {
+          console.log("Error trying to get theme asset for scriptTag", err);
+          console.log(
+            "Presumably missing asset (ambiguous invalid json response), creating asset now"
+          );
+        }
+
+        try {
+          const assetsRes = await client.put({
+            path: "assets",
+            data: {
+              asset: {
+                key: `assets/${SCRIPT_ASSET_KEY}`,
+                value: getMemberBenefitsJS(
+                  discountId,
+                  lockAddresses,
+                  lockName,
+                  otherMemberships
+                ),
+              },
+            },
+            type: "application/json",
+          });
+          if (!assetsRes.body.asset || !assetsRes.body.asset.public_url) {
+            console.log("Invalid put assetsRes", assetsRes);
+            throw "Missing asset.public_url";
+          }
+          console.log("New assetsRes.body.asset", assetsRes.body.asset);
+          scriptTagSrc = assetsRes.body.asset.public_url;
+
+          const detailsMetafieldRes = await client.get({
+            path: "metafields",
+            query: { key: lockDetailsKey },
+          });
+          console.log(
+            "detailsMetafieldRes.body.metafields",
+            detailsMetafieldRes.body.metafields
+          );
+
+          const { metafields } = detailsMetafieldRes.body;
+          if (metafields.length > 0) {
+            lockDetails = JSON.parse(metafields[0].value);
+            lockDetailsMetafieldId = metafields[0].id;
+            console.log("Lock details", lockDetails);
+
+            // Delete existing scriptTag
+            if (lockDetails.scriptTagId) {
+              await client.delete({
+                path: `script_tags/${lockDetails.scriptTagId}`,
+              });
+            }
+          }
+        } catch (err) {
+          console.log("Error in saveMembership", err);
+          ctx.body = {
+            status: "error",
+            errors: "Could not save membership.",
+          };
+
+          return;
+        }
+
         // Create new script tag
         const scriptTagRes = await client.post({
           path: "script_tags",
@@ -716,7 +752,7 @@ app.prepare().then(async () => {
               discountId,
               scriptTagId,
             }),
-            value_type: "json_string",
+            type: "json",
           },
         },
         type: "application/json",
@@ -777,7 +813,7 @@ app.prepare().then(async () => {
         });
         const appAssets = assetsRes.body.assets.filter(
           ({ key }) =>
-            key.indexOf(`assets/${ASSET_KEY_PREFIX}`) === 0 ||
+            key.indexOf(`assets/${SCRIPT_ASSET_KEY}`) === 0 ||
             key.indexOf("sections/mb-hero") === 0 ||
             key.indexOf("sections/mb-topbar") === 0
         );
