@@ -139,27 +139,7 @@
       document.querySelector("#btn-connect").removeAttribute("disabled");
     }
 
-    async function fetchAccountData() {
-      // Get a Web3 instance for the wallet
-      const web3 = new Web3(provider);
-
-      // Web3 instances for all productive networks (potentially having locks):
-      const web3Mainnet = new Web3(
-        new Web3.providers.HttpProvider(
-          "https://mainnet.infura.io/v3/6dd11545940046c0979b5087cafd816e"
-        )
-      );
-      const web3Polygon = new Web3(
-        new Web3.providers.HttpProvider(
-          "https://polygon-mainnet.infura.io/v3/ac9e710e20ce4afea766da1a18ef0ba1"
-        )
-      );
-      const web3Xdai = new Web3(
-        new Web3.providers.HttpProvider(
-          "https://apis.ankr.com/79e6b002c297431f9e7ec8d74567d743/8a8d4081c8172f13f658a2d3bb64e499/xdai/fast/main"
-        )
-      );
-
+    function checkKeyValidity(web3Instance, lockAddress) {
       const lockAbi = [
         {
           constant: true,
@@ -181,6 +161,59 @@
           type: "function",
         },
       ];
+
+      const lock = new web3Instance.eth.Contract(lockAbi, lockAddress);
+      lock.methods
+        .getHasValidKey(selectedAccount)
+        .call()
+        .then((result) => {
+          if (result === true) {
+            window.dispatchEvent(
+              new CustomEvent("memberBenefits.status", {
+                detail: {
+                  state: "unlocked",
+                  lock: lockAddress,
+                },
+              })
+            );
+          }
+        })
+        .catch((error) => {
+          // TODO: Lock not found or network error, auto-retry?
+        });
+    }
+
+    async function fetchAccountData() {
+      // Web3 instance for the wallet
+      const web3 = new Web3(provider);
+
+      // Web3 instances for all productive networks (potentially having locks)
+
+      // Infura
+      const web3Mainnet = new Web3(
+        new Web3.providers.HttpProvider(
+          "https://mainnet.infura.io/v3/6dd11545940046c0979b5087cafd816e"
+        )
+      );
+      const web3Polygon = new Web3(
+        new Web3.providers.HttpProvider(
+          "https://polygon-mainnet.infura.io/v3/ac9e710e20ce4afea766da1a18ef0ba1"
+        )
+      );
+      const web3Optimism = new Web3(
+        new Web3.providers.HttpProvider(
+          "https://optimism-mainnet.infura.io/v3/e9fc0363e5c74313ae2f2531186645ef"
+        )
+      );
+
+      // Ankr
+      const web3Xdai = new Web3(
+        new Web3.providers.HttpProvider(
+          "https://apis.ankr.com/79e6b002c297431f9e7ec8d74567d743/8a8d4081c8172f13f658a2d3bb64e499/xdai/fast/main"
+        )
+      );
+
+      // TODO: add BSC support (via Ankr ?)
 
       // Get selected account from wallet
       const accounts = await web3.eth.getAccounts();
@@ -210,77 +243,10 @@
 
         locks.map((lockAddress) => {
           // Check if lock address is deployed on a productive network, and if the key is valid
-          const mainnetLock = new web3Mainnet.eth.Contract(
-            lockAbi,
-            lockAddress
-          );
-          mainnetLock.methods
-            .getHasValidKey(selectedAccount)
-            .call()
-            .then((result) => {
-              // console.log('Found lock on mainnet', result);
-
-              if (result === true) {
-                window.dispatchEvent(
-                  new CustomEvent("memberBenefits.status", {
-                    detail: {
-                      state: "unlocked",
-                      lock: lockAddress,
-                    },
-                  })
-                );
-              }
-            })
-            .catch((error) => {
-              // console.log('Error trying to find lock on mainnet', error);
-            });
-
-          const xdaiLock = new web3Xdai.eth.Contract(lockAbi, lockAddress);
-          xdaiLock.methods
-            .getHasValidKey(selectedAccount)
-            .call()
-            .then((result) => {
-              // console.log('Found lock on xdai', result);
-
-              if (result === true) {
-                window.dispatchEvent(
-                  new CustomEvent("memberBenefits.status", {
-                    detail: {
-                      state: "unlocked",
-                      lock: lockAddress,
-                    },
-                  })
-                );
-              }
-            })
-            .catch((error) => {
-              // console.log('Error trying to find lock on xdai', error);
-            });
-
-          const polygonLock = new web3Polygon.eth.Contract(
-            lockAbi,
-            lockAddress
-          );
-          polygonLock.methods
-            .getHasValidKey(selectedAccount)
-            .call()
-            .then((result) => {
-              // console.log('Found lock on polygon', result);
-
-              if (result === true) {
-                window.dispatchEvent(
-                  new CustomEvent("memberBenefits.status", {
-                    detail: {
-                      state: "unlocked",
-                      lock: lockAddress,
-                    },
-                  })
-                );
-              }
-            })
-            .catch((error) => {
-              // console.log('Error trying to find lock on polygon', error);
-            });
+          checkKeyValidity(web3Mainnet, lockAddress);
+          checkKeyValidity(web3Xdai, lockAddress);
+          checkKeyValidity(web3Polygon, lockAddress);
+          checkKeyValidity(web3Optimism, lockAddress);
         });
       });
 
