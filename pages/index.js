@@ -50,7 +50,7 @@ class Index extends React.Component {
         <TitleBar title="Settings" />
         <Layout>
           <Layout.AnnotatedSection
-            title="Step 1: Setup Memperships"
+            title="Step 1: Setup Memberships"
             description="Add memberships to your shop, and reward members with discounts."
           >
             <div style={{ marginBottom: "12px" }}>
@@ -159,8 +159,8 @@ class Index extends React.Component {
                   Add sections to your theme in your Online Store settings under{" "}
                   <Link onClick={this.handleThemeClick}>Themes: Customize</Link>{" "}
                   <br />
-                  You'll find the "MB|"-sections in the <b>Promotional</b>{" "}
-                  category. There are currently hero and top-bar sections.
+                  You'll find the "MB|"-sections on the bottom after clicking on
+                  "see more".
                 </p>
               </Card>
             </Layout.AnnotatedSection>
@@ -196,12 +196,9 @@ class Index extends React.Component {
         method: "GET",
       });
       const response = await lockRes.json();
-      console.log("locks response", response);
-
       if (response.errors || !response.data) {
         throw `Error in metafield response: ${JSON.stringify(response)}`;
       }
-
       this.setState({
         memberships: response.data.memberships,
         discounts: response.data.discounts,
@@ -290,11 +287,7 @@ class Index extends React.Component {
       if (result.status !== "success" || !result.data) {
         throw result.errors;
       }
-      console.log("Saved lock");
-      const { scriptTagId } = result.data;
-      if (scriptTagId) {
-        console.log("Active scriptTag ID:", scriptTagId);
-      }
+      // console.log("Saved lock");
       await this.loadMemberships();
     } catch (err) {
       console.log("Error in handleSaveMembership:", err);

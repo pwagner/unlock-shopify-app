@@ -11,6 +11,8 @@ import bodyParser from "koa-body-parser";
 import { uid } from "uid";
 import _ from "lodash";
 import { parse } from "url";
+import { ethers } from "ethers";
+import Web3 from "web3";
 
 import RedisStore from "./redis-store";
 
@@ -41,7 +43,6 @@ const {
   SCOPES,
   HOST,
   PORT,
-  SHOP,
 } = process.env;
 const port = parseInt(PORT, 10) || 8081;
 const dev = NODE_ENV !== "production";
@@ -63,6 +64,36 @@ Shopify.Context.initialize({
     sessionStorage.deleteCallback
   ),
 });
+
+// Web3 instances for all productive networks (potentially having locks)
+
+// TODO: env vars for API keys!
+
+// Infura
+const web3Mainnet = new Web3(
+  new Web3.providers.HttpProvider(
+    "https://mainnet.infura.io/v3/6dd11545940046c0979b5087cafd816e"
+  )
+);
+const web3Polygon = new Web3(
+  new Web3.providers.HttpProvider(
+    "https://polygon-mainnet.infura.io/v3/ac9e710e20ce4afea766da1a18ef0ba1"
+  )
+);
+const web3Optimism = new Web3(
+  new Web3.providers.HttpProvider(
+    "https://optimism-mainnet.infura.io/v3/e9fc0363e5c74313ae2f2531186645ef"
+  )
+);
+
+// Ankr
+const web3Xdai = new Web3(
+  new Web3.providers.HttpProvider(
+    "https://apis.ankr.com/79e6b002c297431f9e7ec8d74567d743/8a8d4081c8172f13f658a2d3bb64e499/xdai/fast/main"
+  )
+);
+
+// TODO: add BSC support (via Ankr ?)
 
 const loadActiveShopsFromStorage = async () => {
   const activeShopsFromStorage = await sessionStorage.getAsync(
@@ -175,14 +206,15 @@ const getMemberBenefitsJS = (
     { encoding: "utf8", flag: "r" }
   );
   const uploadContent = fileContent
-    .replace(/__SHOP__/g, SHOP)
     .replace(
       /__DISCOUNT_CODE_BY_LOCK_ADDRESS__/g,
       JSON.stringify(discountCodesByLockAddresses)
     )
-    .replace(/__LOCKS_BY_NAME__/g, JSON.stringify(locksByMembershipName));
+    .replace(/__LOCKS_BY_NAME__/g, JSON.stringify(locksByMembershipName))
+    .replace(/__UNLOCK_APP_URL__/g, `${HOST}${UNLOCK_PATH}`)
+    .replace(/__UNLOCK_STATE_URL__/g, `${HOST}${UNLOCK_STATE_PATH}`);
+  // console.log("memberbenefits.js uploadContent", uploadContent);
 
-  console.log("memberbenefits.js uploadContent", uploadContent);
   return uploadContent;
 };
 
@@ -197,6 +229,8 @@ const deleteAsset = async (client, key) => {
   }
 };
 
+const UNLOCK_PATH = "/unlock"; // Unlock Protocol redirect here after verifying the user's address.
+const UNLOCK_STATE_PATH = "/api/getUnlockState"; // Unlock Protocol redirect here after verifying the user's address.
 const WEBHOOK_PATH_APP_UNINSTALLED = "/webhooks";
 // Mandatory GDPR webhooks:
 const WEBHOOK_PATH_CUSTOMERS_REQUEST = "/webhooks/customers-data_request";
@@ -254,6 +288,165 @@ app.prepare().then(async () => {
     ctx.respond = false;
     ctx.res.statusCode = 200;
   };
+
+  router.get(UNLOCK_STATE_PATH, async (ctx) => {
+    try {
+      // Generate state as hash of IP and current timestamp
+      const state = ethers.utils.id(ctx.request.ip + Date.now());
+
+      // Store redirectUri in redis using state as key.
+      const redirectUri = (ctx.query && ctx.query.url) || "";
+      const locks = (ctx.query && ctx.query.locks) || "";
+      const membershipNames = (ctx.query && ctx.query.membershipNames) || "";
+
+      sessionStorage.setAsync(
+        state,
+        JSON.stringify({
+          redirectUri,
+          locks: locks.split(","),
+          memberships: membershipNames.split(","),
+        }),
+        "EX",
+        60 * 5 // Expire in 5 min.
+      );
+
+      ctx.set("Access-Control-Allow-Origin", "*");
+      ctx.body = { state };
+      ctx.res.statusCode = 200;
+    } catch (error) {
+      console.log(`Failed to get unlock state: ${error}`);
+    }
+  });
+
+  function checkKeyValidity(web3, lockAddress, selectedAccount) {
+    const lock = new web3.eth.Contract(
+      [
+        {
+          constant: true,
+          inputs: [
+            {
+              name: "_owner",
+              type: "address",
+            },
+          ],
+          name: "getHasValidKey",
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+            },
+          ],
+          payable: false,
+          stateMutability: "view",
+          type: "function",
+        },
+      ],
+      lockAddress
+    );
+
+    return lock.methods
+      .getHasValidKey(selectedAccount)
+      .call()
+      .then((result) => {
+        if (result === true) {
+          console.log(
+            "FOUND VALID MEMBERSHIP",
+            lockAddress,
+            web3.version.network,
+            web3.provider && web3.provider.host
+          );
+
+          return true;
+        }
+
+        return false;
+      })
+      .catch((err) => {
+        // TODO: Lock not found or network error, auto-retry?
+        console.log("Could not validate key");
+
+        if (
+          err
+            .toString()
+            .indexOf(
+              `Returned values aren't valid, did it run Out of Gas? You might also see this error if you are not using the correct ABI for the contract you are retrieving data from, requesting data from a block number that does not exist, or querying a node which is not fully synced.`
+            ) !== -1
+        ) {
+          console.log("LOCK NOT on network?");
+        }
+
+        if (
+          err
+            .toString()
+            .indexOf(`Invalid JSON RPC response: "Server Internal Error`) !== -1
+        ) {
+          console.log("ANKR or provider ERROR");
+        }
+
+        return false;
+      });
+  }
+
+  router.get(UNLOCK_PATH, async (ctx) => {
+    console.log("UNLOCK_PATH", UNLOCK_PATH);
+    try {
+      // Extract user's address from signed message.
+      const { state, code } = ctx.query;
+      const decoded = ethers.utils.base64.decode(code);
+      const message = JSON.parse(ethers.utils.toUtf8String(decoded));
+      const address = ethers.utils.verifyMessage(message.d, message.s);
+
+      // Use state to load URL for redirect back to shop.
+      const storedString = await sessionStorage.getAsync(state);
+      const data = JSON.parse(storedString);
+      const { redirectUri, locks, memberships } = data;
+      console.log("looked up memberships", memberships);
+      const finalUrl = new URL(redirectUri);
+
+      // Validate memberships for recovered address.
+      const validMemberships = [];
+      for (let lockAddress of locks) {
+        // Check if lock address is deployed on a productive network, and if the key is valid
+        if (await checkKeyValidity(web3Mainnet, lockAddress, address)) {
+          validMemberships.push(lockAddress);
+          console.log("found membership on mainnet");
+        }
+
+        if (await checkKeyValidity(web3Xdai, lockAddress, address)) {
+          validMemberships.push(lockAddress);
+          console.log("found membership on xdai");
+        }
+
+        if (await checkKeyValidity(web3Polygon, lockAddress, address)) {
+          validMemberships.push(lockAddress);
+          console.log("found membership on polygon");
+        }
+
+        if (await checkKeyValidity(web3Optimism, lockAddress, address)) {
+          validMemberships.push(lockAddress);
+          console.log("found membership on optimism");
+        }
+
+        // TODO: add network BSC
+      }
+
+      console.log("validMemberships", validMemberships);
+      // const redirectUrl = `${finalUrl.origin}/discount/<discount_code>?redirect=...`;
+      finalUrl.searchParams.set("_mb_address", address);
+      finalUrl.searchParams.set("_mb_locks", validMemberships);
+      finalUrl.searchParams.set("_mb_memberships", memberships);
+
+      // Redirect back to shop
+      ctx.redirect(finalUrl.toString());
+      ctx.res.statusCode = 303;
+    } catch (error) {
+      console.log(UNLOCK_PATH, `Failed to unlock! ${error}`);
+
+      // TODO: redirect customer back to shop?
+      // ctx.redirect(finalUrl.toString());
+      ctx.res.statusCode = 401;
+    }
+  });
 
   router.post(WEBHOOK_PATH_APP_UNINSTALLED, async (ctx) => {
     try {
@@ -509,17 +702,10 @@ app.prepare().then(async () => {
 
         // Delete script asset
         // TODO: Only if this is the last membership to be deleted
-        await client.delete({
-          path: "assets",
-          query: { "asset[key]": `assets/${SCRIPT_ASSET_KEY}.js` },
-        });
-
-        // Delete hero theme section template
-        // TODO: Only if this is the last membership to be deleted
         /*
         await client.delete({
           path: "assets",
-          query: { "asset[key]": `sections/mb-hero-${metafieldId}.liquid` },
+          query: { "asset[key]": `assets/${SCRIPT_ASSET_KEY}` },
         });
         */
 

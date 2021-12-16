@@ -1,8 +1,9 @@
 (function () {
-  let web3Modal,
-    provider,
-    selectedAccount,
+  let selectedAccount,
     unpkgScriptsLoaded = 0;
+
+  window.locksByMembershipName = __LOCKS_BY_NAME__;
+  const discountCodesByLockAddresses = __DISCOUNT_CODE_BY_LOCK_ADDRESS__;
 
   // Helper funciton to load scripts from unpkg
   window.load_script = window.load_script || {
@@ -10,7 +11,7 @@
     index: -1,
     loading: false,
     next: function () {
-      if (load_script.loading) return;
+      if (window.load_script.loading) return;
 
       // Load the next queue item
       window.load_script.loading = true;
@@ -30,335 +31,283 @@
     },
   };
 
-  window.load_scripts =
-    window.load_scripts ||
-    function (src) {
-      if (src) {
-        // Check if already added
-        for (var i = 0; i < window.load_script.scripts.length; i++) {
-          if (window.load_script.scripts[i].src == src)
-            return window.load_script.scripts[i].promise;
-        }
-        // Add to the queue
-        var item = { src: src };
-        item.promise = new Promise((resolve) => {
-          item.resolve = resolve;
-        });
-        window.load_script.scripts.push(item);
-        window.load_script.next();
+  loadScripts = function (src) {
+    if (src) {
+      // Check if already added
+      for (var i = 0; i < window.load_script.scripts.length; i++) {
+        if (window.load_script.scripts[i].src == src)
+          return window.load_script.scripts[i].promise;
       }
-
-      // Return the promise of the last queue item
-      return window.load_script.scripts[window.load_script.scripts.length - 1]
-        .promise;
-    };
-
-  function init() {
-    // Unpkg imports
-    const Web3Modal = window.Web3Modal.default;
-    const WalletConnectProvider = window.WalletConnectProvider.default;
-
-    window.locksByMembershipName = __LOCKS_BY_NAME__;
-    window.getMembershipDiscountCodeFromCookie =
-      window.getMembershipDiscountCodeFromCookie ||
-      function () {
-        const value = "; " + document.cookie;
-        const parts = value.split("; discount_code=");
-        if (parts.length == 2) return parts.pop().split(";").shift();
-      };
-
-    /**
-     * Setup Web3modal
-     */
-
-    function initWeb3Modal() {
-      web3Modal = new Web3Modal({
-        cacheProvider: true,
-        providerOptions: {
-          walletconnect: {
-            package: WalletConnectProvider,
-            options: {
-              infuraId: "6dd11545940046c0979b5087cafd816e",
-            },
-          },
-        },
-        disableInjectedProvider: false, // optional. For MetaMask / Brave / Opera.
+      // Add to the queue
+      var item = { src: src };
+      item.promise = new Promise((resolve) => {
+        item.resolve = resolve;
       });
+      window.load_script.scripts.push(item);
+      window.load_script.next();
     }
 
-    async function onConnect() {
-      try {
-        provider = await web3Modal.connect();
-      } catch (e) {
-        console.log("Could not get a wallet connection", e);
-        return;
-      }
+    // Return the promise of the last queue item
+    return window.load_script.scripts[window.load_script.scripts.length - 1]
+      .promise;
+  };
 
-      provider.on("accountsChanged", (accounts) => {
-        onDisconnect();
-        fetchAccountData();
-      });
-      /*
-      provider.on("networkChanged", (networkId) => {
-        fetchAccountData();
-      });
-      */
+  function simulateToggle(elem) {
+    var evt = new MouseEvent("toggle", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    });
+    elem.dispatchEvent(evt);
+  }
 
-      await refreshAccountData();
+  function simulateClick(elem) {
+    var evt = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    });
+    elem.dispatchEvent(evt);
+  }
+
+  function getMembershipDiscountCodeFromCookie() {
+    const value = "; " + document.cookie;
+    const parts = value.split("; discount_code=");
+    if (parts.length == 2) return parts.pop().split(";").shift();
+  }
+
+  async function onConnect() {
+    const currentUrl = window.location.href;
+    const unlockAppUrl = `__UNLOCK_APP_URL__`;
+
+    const displayedMembershipElements = document.querySelectorAll(
+      ".membership-name"
+    );
+    const displayedMemberships = [];
+    for (let i = 0; i < displayedMembershipElements.length; i++) {
+      displayedMemberships.push(displayedMembershipElements[i].textContent);
     }
+    console.log("displayedMemberships", displayedMemberships);
 
-    async function onDisconnect() {
-      // Remove stored discount code
-      document.cookie = "discount_code=;max-age=0";
-      delete window.activeDiscountCode;
+    // Store currentUrl for redirect after request to unlockAppUrl
+    try {
+      const state = await requestUnlockStateAndStoreUrl(
+        currentUrl,
+        displayedMemberships
+      );
+      if (!state) throw "State missing!";
 
-      if (provider && provider.close) {
-        await provider.close();
-      }
-
-      await web3Modal.clearCachedProvider();
-      provider = null;
-      selectedAccount = null;
-
-      // Set the UI back to the initial state
-      document.querySelector("#prepare").style.display = "block";
-      document.querySelector("#connected").style.display = "none";
-      document.querySelectorAll(".membership .status").forEach((el) => {
-        el.textContent = "Not available";
-      });
-      updateUnlockUIElements("locked");
+      // state is used to identify the user and redirect him to the right URL.
+      const domain = new URL(unlockAppUrl).host;
+      const unlockCheckoutUrl = `https://app.unlock-protocol.com/checkout?client_id=${domain}&redirect_uri=${unlockAppUrl}&state=${state}`;
+      window.location.href = unlockCheckoutUrl;
+    } catch (err) {
+      console.log("Error trying to get state and store redirect URL.", err);
     }
+  }
 
-    async function refreshAccountData() {
-      document.querySelector("#connected").style.display = "none";
-      document.querySelector("#prepare").style.display = "block";
-      document
-        .querySelector("#btn-connect")
-        .setAttribute("disabled", "disabled");
-      await fetchAccountData();
-      document.querySelector("#btn-connect").removeAttribute("disabled");
+  function requestUnlockStateAndStoreUrl(redirectUri, membershipNames) {
+    const unlockStateUrl = new URL(`__UNLOCK_STATE_URL__`);
+    const allLocks = [];
+    for (name in window.locksByMembershipName) {
+      allLocks.push(...window.locksByMembershipName[name]);
     }
+    console.log("allLocks", allLocks);
+    unlockStateUrl.search = new URLSearchParams({
+      url: window.location.href,
+      locks: allLocks,
+      membershipNames,
+    });
+    return fetch(unlockStateUrl.toString())
+      .then((response) => response.json())
+      .then((data) => data.state);
+  }
 
-    function checkKeyValidity(web3Instance, lockAddress) {
-      const lockAbi = [
-        {
-          constant: true,
-          inputs: [
-            {
-              name: "_owner",
-              type: "address",
-            },
-          ],
-          name: "getHasValidKey",
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-            },
-          ],
-          payable: false,
-          stateMutability: "view",
-          type: "function",
-        },
-      ];
+  async function onDisconnect() {
+    // Remove stored discount code
+    document.cookie = "discount_code=;max-age=0";
+    delete window.activeDiscountCode;
+    selectedAccount = null;
 
-      const lock = new web3Instance.eth.Contract(lockAbi, lockAddress);
-      lock.methods
-        .getHasValidKey(selectedAccount)
-        .call()
-        .then((result) => {
-          if (result === true) {
-            window.dispatchEvent(
-              new CustomEvent("memberBenefits.status", {
-                detail: {
-                  state: "unlocked",
-                  lock: lockAddress,
-                },
-              })
-            );
-          }
-        })
-        .catch((error) => {
-          // TODO: Lock not found or network error, auto-retry?
-        });
-    }
+    // Set the UI back to the initial state
+    document.querySelector("#prepare").style.display = "block";
+    document.querySelector("#connected").style.display = "none";
+    document.querySelectorAll(".membership .status").forEach((el) => {
+      el.textContent = "Not available";
+    });
+    updateUnlockUIElements("locked");
+  }
 
-    async function fetchAccountData() {
-      // Web3 instance for the wallet
-      const web3 = new Web3(provider);
+  async function fetchAccountData(selectedAccount, unlockedLocks) {
+    console.log("fetchAccountData start", selectedAccount, unlockedLocks);
+    document.querySelector("#selected-account").textContent = selectedAccount;
 
-      // Web3 instances for all productive networks (potentially having locks)
-
-      // Infura
-      const web3Mainnet = new Web3(
-        new Web3.providers.HttpProvider(
-          "https://mainnet.infura.io/v3/6dd11545940046c0979b5087cafd816e"
-        )
-      );
-      const web3Polygon = new Web3(
-        new Web3.providers.HttpProvider(
-          "https://polygon-mainnet.infura.io/v3/ac9e710e20ce4afea766da1a18ef0ba1"
-        )
-      );
-      const web3Optimism = new Web3(
-        new Web3.providers.HttpProvider(
-          "https://optimism-mainnet.infura.io/v3/e9fc0363e5c74313ae2f2531186645ef"
-        )
-      );
-
-      // Ankr
-      const web3Xdai = new Web3(
-        new Web3.providers.HttpProvider(
-          "https://apis.ankr.com/79e6b002c297431f9e7ec8d74567d743/8a8d4081c8172f13f658a2d3bb64e499/xdai/fast/main"
-        )
-      );
-
-      // TODO: add BSC support (via Ankr ?)
-
-      // Get selected account from wallet
-      const accounts = await web3.eth.getAccounts();
-      selectedAccount = accounts[0];
-      document.querySelector("#selected-account").textContent = selectedAccount;
-
-      // Check for Unlock keys and update status, if connected!
-      document.querySelectorAll(".status").forEach((el) => {
-        const locksClasses = el.dataset.locks.replace(",", " ");
-        const membershipDiscountCode = el.dataset.discount;
-        el.innerHTML = `
-          <jelly-switch
-            class="benefitSwitch ${locksClasses}"
-            name="switch"
-            onToggle="return window.captureMembershipChangeEvent(this, '${membershipDiscountCode}')"
-            disabled
-          >
-            <p slot="content-right" class="rightContent">checking…</p>
-          </jelly-switch>
-        `;
-      });
-
-      document.querySelectorAll(".membership").forEach((membership) => {
-        const locks = membership
-          .querySelector(".status")
-          .dataset.locks.split(",");
-
-        locks.map((lockAddress) => {
-          // Check if lock address is deployed on a productive network, and if the key is valid
-          checkKeyValidity(web3Mainnet, lockAddress);
-          checkKeyValidity(web3Xdai, lockAddress);
-          checkKeyValidity(web3Polygon, lockAddress);
-          checkKeyValidity(web3Optimism, lockAddress);
-        });
-      });
-
-      document.querySelector("#prepare").style.display = "none";
-      document.querySelector("#connected").style.display = "block";
-    }
-
-    const discountCodesByLockAddresses = __DISCOUNT_CODE_BY_LOCK_ADDRESS__;
-
-    window.showMemberBenefitsModal = async (options) => {
-      // Show memberships and current status
-      const template = document.getElementById("template-memberships");
-      const membershipsContainer = document.getElementById("memberships");
-      membershipsContainer.innerHTML = "";
-
-      // Add rows for all memberships and check status
-      await Promise.all(
-        options.map(async ({ name, locks }) => {
-          const clone = template.content.cloneNode(true);
-          clone.querySelector(".membership-name").textContent = name;
-          clone.querySelector(".membership-validity").classList.add(...locks);
-          clone.querySelector(".status").dataset.locks = locks.join(",");
-          clone.querySelector(".status").dataset.discount =
-            discountCodesByLockAddresses[locks[0]];
-          membershipsContainer.appendChild(clone);
-        })
-      );
-
-      initWeb3Modal();
-      document
-        .querySelector("#btn-connect")
-        .addEventListener("click", onConnect);
-      document
-        .querySelector("#btn-disconnect")
-        .addEventListener("click", onDisconnect);
-
-      if (web3Modal.cachedProvider) {
-        await web3Modal.connect();
-        onConnect();
-      }
-    };
-
-    function updateUnlockUIElements(unlockState) {
-      // Hide all .unlock-content elements
-      const unlockContentElements = document.querySelectorAll(
-        ".unlock-content"
-      );
-      unlockContentElements.forEach((element) => {
-        element.style.display = "none";
-      });
-      if (unlockContentElements.length > 0) {
-        // Se show only the relevant element (CSS class: locked|unlocked)
-        document
-          .querySelectorAll(".unlock-content." + unlockState)
-          .forEach((element) => {
-            element.style.display = "block";
-          });
-      }
-
-      if (unlockState === "unlocked" && window.activeDiscountCode) {
-        // Hide sections with the according setting after unlocking (and benefit was applied)
-        document
-          .querySelectorAll(".hidden-after-unlocked")
-          .forEach((element) => {
-            element.style.display = "none";
-          });
-      } else if (unlockState === "locked") {
-        // Show sections with the according setting after disconnecting the wallet
-        document
-          .querySelectorAll(".hidden-after-unlocked")
-          .forEach((element) => {
-            element.style.display = "block";
-          });
-      }
-    }
-
-    window.addEventListener("memberBenefits.status", function (event) {
-      const lockAddress = event.detail.lock.toString();
-
-      // Find membership row in modal via lock address class
-      const benefitSwitch = document.getElementsByClassName(
-        "benefitSwitch " + lockAddress
-      )[0];
-      if (benefitSwitch) {
-        benefitSwitch.disabled = false;
-      }
-
-      document.getElementsByClassName(
-        "membership-validity " + lockAddress
-      )[0].textContent = "🔓 unlocked";
-      document.getElementsByClassName(
-        "membership-validity " + lockAddress
-      )[0].style.backgroundColor = "green";
-
-      console.log(
-        "event memberBenefits.status discountCodesByLockAddresses",
-        discountCodesByLockAddresses,
-        lockAddress
-      );
-      if (
-        window.activeDiscountCode === discountCodesByLockAddresses[lockAddress]
-      ) {
-        console.log("Setting checked");
-        benefitSwitch.checked = true;
-        benefitSwitch.querySelector(".rightContent").textContent = " Active";
-      } else {
-        benefitSwitch.querySelector(".rightContent").textContent = " Inactive";
-      }
-
-      updateUnlockUIElements(event.detail.state.toString());
+    // Check for Unlock keys and update status, if connected.
+    document.querySelectorAll(".status").forEach((el) => {
+      console.log("status", el);
+      const locksClasses = el.dataset.locks.replace(",", " ");
+      const membershipDiscountCode = el.dataset.discount;
+      el.innerHTML = `
+        <jelly-switch
+          class="benefitSwitch ${locksClasses}"
+          name="switch"
+          onToggle="return window.captureMembershipChangeEvent(this, '${membershipDiscountCode}')"
+          disabled
+        >
+          <p slot="content-right" class="rightContent"> Inactive</p>
+        </jelly-switch>
+      `;
     });
 
+    // TODO: Show key-purchase URL if no valid keys were found?
+    /*
+    setTimeout(() => {
+      const validMembershipCells = document.getElementsByClassName("membership-validity valid");
+      if(validMembershipCells.length > 0) return;
+      document.getElementById("key-purchase-container").style.display = "block";
+    }, 2000);
+    */
+
+    document.querySelectorAll(".membership").forEach((membership) => {
+      console.log("membership", membership);
+      const knownLocks = membership
+        .querySelector(".status")
+        .dataset.locks.split(",");
+
+      knownLocks.map((lockAddress) => {
+        if (unlockedLocks.indexOf(lockAddress) === -1) return;
+
+        // Found unlocked lock
+        window.dispatchEvent(
+          new CustomEvent("memberBenefits.status", {
+            detail: {
+              state: "unlocked",
+              lock: lockAddress,
+            },
+          })
+        );
+
+        // Apply discount, if there is only one possible option
+        // Delay a second to emphasize activation
+        setTimeout(() => {
+          const validMembershipCells = document.getElementsByClassName(
+            "membership-validity valid"
+          );
+          if (validMembershipCells.length === 1) {
+            const jellySwitch = document.querySelector(".benefitSwitch");
+            jellySwitch.checked = true;
+            simulateToggle(jellySwitch);
+          }
+        }, 1000);
+      });
+    });
+
+    console.log("prepare and connected");
+
+    document.querySelector("#prepare").style.display = "none";
+    document.querySelector("#connected").style.display = "block";
+  }
+
+  // Redirect to unlock, verify address (checking key validity server-side).
+  window.showMemberBenefitsModal = async (options) => {
+    // Show memberships and current status
+    const template = document.getElementById("template-memberships");
+    const membershipsContainer = document.getElementById("memberships");
+    membershipsContainer.innerHTML = "";
+
+    // Add rows for all memberships and check status
+    await Promise.all(
+      options.map(async ({ name, locks }) => {
+        console.log("modal options locks", locks);
+        const clone = template.content.cloneNode(true);
+        clone.querySelector(".membership-name").textContent = name;
+        clone.querySelector(".membership-validity").classList.add(...locks);
+        clone.querySelector(".status").dataset.locks = locks.join(",");
+        clone.querySelector(".status").dataset.discount =
+          discountCodesByLockAddresses[locks[0]];
+        membershipsContainer.appendChild(clone);
+      })
+    );
+
+    // initWeb3Modal();
+    document.querySelector("#btn-connect").addEventListener("click", onConnect);
+    document
+      .querySelector("#btn-disconnect")
+      .addEventListener("click", onDisconnect);
+
+    if (window.memberBenefitsAddress) {
+      await fetchAccountData(
+        window.memberBenefitsAddress,
+        window.memberBenefitsUnlocked
+      );
+    }
+  };
+
+  function updateUnlockUIElements(unlockState) {
+    // Hide all .unlock-content elements
+    const unlockContentElements = document.querySelectorAll(".unlock-content");
+    unlockContentElements.forEach((element) => {
+      element.style.display = "none";
+    });
+    if (unlockContentElements.length > 0) {
+      // Se show only the relevant element (CSS class: locked|unlocked)
+      document
+        .querySelectorAll(".unlock-content." + unlockState)
+        .forEach((element) => {
+          element.style.display = "block";
+        });
+    }
+
+    if (unlockState === "unlocked" && window.activeDiscountCode) {
+      // Hide sections with the according setting after unlocking (and benefit was applied)
+      document.querySelectorAll(".hidden-after-unlocked").forEach((element) => {
+        element.style.display = "none";
+      });
+    } else if (unlockState === "locked") {
+      // Show sections with the according setting after disconnecting the wallet
+      document.querySelectorAll(".hidden-after-unlocked").forEach((element) => {
+        element.style.display = "block";
+      });
+    }
+  }
+
+  window.addEventListener("memberBenefits.status", function (event) {
+    const lockAddress = event.detail.lock.toString();
+
+    // Find membership row in modal via lock address class
+    const benefitSwitch = document.getElementsByClassName(
+      "benefitSwitch " + lockAddress
+    )[0];
+    if (benefitSwitch) {
+      benefitSwitch.disabled = false;
+    }
+
+    const membershipValidityCell = document.getElementsByClassName(
+      "membership-validity " + lockAddress
+    )[0];
+    membershipValidityCell.textContent = "🔓 unlocked";
+    membershipValidityCell.style.backgroundColor = "green";
+    membershipValidityCell.classList.add("valid");
+
+    console.log(
+      "event memberBenefits.status discountCodesByLockAddresses",
+      discountCodesByLockAddresses,
+      lockAddress
+    );
+    if (
+      window.activeDiscountCode === discountCodesByLockAddresses[lockAddress]
+    ) {
+      console.log("Setting checked");
+      benefitSwitch.checked = true;
+      benefitSwitch.querySelector(".rightContent").textContent = " Active";
+    } else {
+      benefitSwitch.querySelector(".rightContent").textContent = " Inactive";
+    }
+
+    updateUnlockUIElements(event.detail.state.toString());
+  });
+
+  async function init() {
     /*
      *  Member Benefits Modal (Vanilla JS):
      */
@@ -431,6 +380,10 @@
             </template>
           </div>
 
+          <div id="key-purchase-container" style="display:none;">
+            <p style="text-align:center;">Would you like to <a target="_blank" class="purchase-link">become a member</a>?</p>
+          </div>
+
         </div>
       </div>
       <div id="overlay"></div>
@@ -438,16 +391,12 @@
       );
     }
 
-    window.openModalButtons =
-      window.openModalButtons ||
-      document.querySelectorAll("[data-modal-target]");
-    window.closeModalButtons =
-      window.closeModalButtons ||
-      document.querySelectorAll("[data-close-button]");
-    window.overlay = window.overlay || document.getElementById("overlay");
+    openModalButtons = document.querySelectorAll("[data-modal-target]");
+    closeModalButtons = document.querySelectorAll("[data-close-button]");
+    overlay = document.getElementById("overlay");
 
-    if (window.openModalButtons) {
-      window.openModalButtons.forEach((button) => {
+    if (openModalButtons) {
+      openModalButtons.forEach((button) => {
         button.addEventListener("click", () => {
           const modal = document.querySelector(button.dataset.modalTarget);
           openModal(modal);
@@ -455,8 +404,8 @@
       });
     }
 
-    if (window.overlay) {
-      window.overlay.addEventListener("click", () => {
+    if (overlay) {
+      overlay.addEventListener("click", () => {
         const modals = document.querySelectorAll(".mb-modal.active");
         modals.forEach((modal) => {
           closeModal(modal);
@@ -464,8 +413,8 @@
       });
     }
 
-    if (window.closeModalButtons) {
-      window.closeModalButtons.forEach((button) => {
+    if (closeModalButtons) {
+      closeModalButtons.forEach((button) => {
         button.addEventListener("click", () => {
           const modal = button.closest(".mb-modal");
           closeModal(modal);
@@ -473,24 +422,18 @@
       });
     }
 
-    window.openModal =
-      window.openModal ||
-      function openModal(modal) {
-        if (modal == null) return;
+    openModal = function openModal(modal) {
+      if (modal == null) return;
+      document.getElementById("mb-modal").style.display = "block";
+      modal.classList.add("active");
+      overlay.classList.add("active");
+    };
 
-        document.getElementById("mb-modal").style.display = "block";
-
-        modal.classList.add("active");
-        overlay.classList.add("active");
-      };
-
-    window.closeModal =
-      window.closeModal ||
-      function closeModal(modal) {
-        if (modal == null) return;
-        modal.classList.remove("active");
-        overlay.classList.remove("active");
-      };
+    closeModal = function closeModal(modal) {
+      if (modal == null) return;
+      modal.classList.remove("active");
+      overlay.classList.remove("active");
+    };
 
     // On/Off jelly-switch
 
@@ -534,27 +477,54 @@
         }
       };
 
+    // Check if the user was redirected back from Unlock (after signing message).
+    const params = new URLSearchParams(window.location.search);
+    const address = params.get("_mb_address");
+    const locks = params.get("_mb_locks")
+      ? params.get("_mb_locks").split(",")
+      : [];
+    const memberships = params.get("_mb_memberships")
+      ? params.get("_mb_memberships").split(",")
+      : [];
+    console.log("Got address, locks, memberships", address, locks, memberships);
+
+    if (address) {
+      window.memberBenefitsAddress = address;
+      window.memberBenefitsUnlocked = locks;
+      let clickElement;
+      if (locks.length === 0) {
+        // User connected wallet but no valid membership was detected
+        // TODO: Maybe show link to membership purchase URL
+
+        // Use any available modal
+        clickElement = document.querySelector(
+          '[onclick*="showMemberBenefitsModal"]'
+        );
+      } else {
+        // TODO: add signature and verify that locks haven't been changed
+
+        // Show first modal that contains the first lock
+        let selectorString = '[onclick*="showMemberBenefitsModal"]';
+        for (name of memberships) {
+          selectorString += `[onclick*="${name}"]`;
+        }
+        clickElement = document.querySelector(selectorString);
+      }
+
+      console.log("clickElement", clickElement);
+      simulateClick(clickElement);
+    }
+
     window.activeDiscountCode =
-      window.activeDiscountCode || window.getMembershipDiscountCodeFromCookie();
+      window.activeDiscountCode || getMembershipDiscountCodeFromCookie();
 
     if (window.activeDiscountCode) {
-      initWeb3Modal();
-      if (web3Modal && web3Modal.cachedProvider) {
-        web3Modal.connect().then(() => {
-          onConnect();
-          updateUnlockUIElements("unlocked");
-        });
-      }
+      updateUnlockUIElements("unlocked");
     }
   } // end init()
 
-  [
-    "https://unpkg.com/web3@1.2.11/dist/web3.min.js",
-    "https://unpkg.com/web3modal@1.9.0/dist/index.js",
-    "https://unpkg.com/@walletconnect/web3-provider@1.2.1/dist/umd/index.min.js",
-    "https://unpkg.com/jelly-switch",
-  ].forEach(async (item, index, array) => {
-    await window.load_scripts(item);
+  ["https://unpkg.com/jelly-switch"].forEach(async (item, index, array) => {
+    await loadScripts(item);
     unpkgScriptsLoaded++;
 
     if (unpkgScriptsLoaded === array.length) {

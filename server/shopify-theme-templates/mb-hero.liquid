@@ -124,6 +124,11 @@
           {%- if section.settings.text != blank -%}
             <div class="rte-setting mega-subtitle{% if section.settings.text_size == 'large' %} mega-subtitle--large{% endif %}">{{ section.settings.text }}</div>
           {%- endif -%}
+          {%- if section.settings.button_label != blank -%}
+            <a class="btn hero__btn">
+              {{ section.settings.button_label | escape }}
+            </a>
+          {%- endif -%}
         </div>
       </div>
       {%- if section.settings.image != blank -%}
@@ -178,6 +183,14 @@
           {%- if section.settings.text != blank -%}
             <div class="rte-setting mega-subtitle{% if section.settings.text_size == 'large' %} mega-subtitle--large{% endif %}">{{ section.settings.text }}</div>
           {%- endif -%}
+
+          {%- if section.settings.button_label != blank -%}
+            <a class="btn hero__btn"
+              aria-label="connect_link">
+              {{- section.settings.button_label | escape -}}
+            </a>
+          {%- endif -%}
+
         </div>
       </div>
     </div>
@@ -261,7 +274,7 @@
         "zh-TW": "文字"
       },
       "default": {
-        "en": "<p>Use overlay text to give your customers insight into your membership offering.</p>"
+        "en": "<p>Use overlay text to give your customers insight into your membership offering.<br/>When this is clicked, the wallet can be connected and benefits may be applied.</p>"
       }
     },
     {
@@ -773,13 +786,62 @@
       "label": "Hidden if unlocked",
       "info": "If enabled, the hero will not be displayed to members.",
       "default": true
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "info": "Leave empty to hide button.",
+      "label": {
+        "cs": "Text tlačítka",
+        "da": "Knaptekst",
+        "de": "Button-Name",
+        "en": "Button label",
+        "es": "Etiqueta de botón",
+        "fi": "Tekstipainike",
+        "fr": "Texte du bouton",
+        "it": "Etichetta pulsante",
+        "ja": "ボタンのラベル",
+        "ko": "버튼 레이블",
+        "nb": "Knappetikett",
+        "nl": "Knoplabel",
+        "pl": "Przycisk z etykietą",
+        "pt-BR": "Etiqueta de botão",
+        "pt-PT": "Etiqueta do botão",
+        "sv": "Knappetikett",
+        "th": "ป้ายกำกับปุ่ม",
+        "tr": "Düğme etiketi",
+        "vi": "Nhãn nút",
+        "zh-CN": "按钮标签",
+        "zh-TW": "按鈕標籤"
+      },
+      "default": "Connect Wallet"
     }
   ],
   "presets": [
     {
       "name": "MB|Hero",
       "category": {
-        "en": "Promotional"
+        "cs": "Obrázek",
+        "da": "Billede",
+        "de": "Foto",
+        "en": "Image",
+        "es": "Imagen",
+        "fi": "Kuva",
+        "fr": "Image",
+        "it": "Immagine",
+        "ja": "画像",
+        "ko": "이미지",
+        "nb": "Bilde",
+        "nl": "Afbeelding",
+        "pl": "Obraz",
+        "pt-BR": "Imagem",
+        "pt-PT": "Imagem",
+        "sv": "Bild",
+        "th": "รูปภาพ",
+        "tr": "Görsel",
+        "vi": "Hình ảnh",
+        "zh-CN": "图片",
+        "zh-TW": "圖片"
       }
     }
   ]
