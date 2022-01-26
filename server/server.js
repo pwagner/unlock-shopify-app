@@ -349,12 +349,7 @@ app.prepare().then(async () => {
       .call()
       .then((result) => {
         if (result === true) {
-          console.log(
-            "FOUND VALID MEMBERSHIP",
-            lockAddress,
-            web3.version.network,
-            web3.provider && web3.provider.host
-          );
+          console.log("FOUND VALID MEMBERSHIP", lockAddress);
 
           return true;
         }
