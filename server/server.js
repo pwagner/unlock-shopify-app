@@ -431,7 +431,7 @@ app.prepare().then(async () => {
       }
 
       console.log("validMemberships", validMemberships);
-      // const redirectUrl = `${finalUrl.origin}/discount/<discount_code>?redirect=...`;
+
       finalUrl.searchParams.set("_mb_address", address);
       finalUrl.searchParams.set("_mb_locks", validMemberships);
       finalUrl.searchParams.set("_mb_memberships", memberships);

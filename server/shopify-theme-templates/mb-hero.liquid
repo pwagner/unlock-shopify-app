@@ -100,7 +100,7 @@
 {% endstyle %}
 
 
-<div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section" data-modal-target="#mb-modal"
+<div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section"
   onclick='window.showMemberBenefitsModal([{name: "{{ section.settings.membership }}",locks: window.locksByMembershipName["{{ section.settings.membership }}"]}])'>
   {%- if section.settings.hero_layout == 'fixed_width' -%}
     <div class="page-width">

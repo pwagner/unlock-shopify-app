@@ -76,18 +76,9 @@
     if (parts.length == 2) return parts.pop().split(";").shift();
   }
 
-  async function onConnect() {
+  async function onConnect(displayedMemberships) {
     const currentUrl = window.location.href;
     const unlockAppUrl = `__UNLOCK_APP_URL__`;
-
-    const displayedMembershipElements = document.querySelectorAll(
-      ".membership-name"
-    );
-    const displayedMemberships = [];
-    for (let i = 0; i < displayedMembershipElements.length; i++) {
-      displayedMemberships.push(displayedMembershipElements[i].textContent);
-    }
-    console.log("displayedMemberships", displayedMemberships);
 
     // Store currentUrl for redirect after request to unlockAppUrl
     try {
@@ -112,12 +103,12 @@
     for (name in window.locksByMembershipName) {
       allLocks.push(...window.locksByMembershipName[name]);
     }
-    console.log("allLocks", allLocks);
     unlockStateUrl.search = new URLSearchParams({
       url: window.location.href,
       locks: allLocks,
       membershipNames,
     });
+
     return fetch(unlockStateUrl.toString())
       .then((response) => response.json())
       .then((data) => data.state);
@@ -127,6 +118,7 @@
     // Remove stored discount code
     document.cookie = "discount_code=;max-age=0";
     delete window.activeDiscountCode;
+    delete window.memberBenefitsAddress;
     selectedAccount = null;
 
     // Set the UI back to the initial state
@@ -208,8 +200,21 @@
     document.querySelector("#connected").style.display = "block";
   }
 
-  // Redirect to unlock, verify address (checking key validity server-side).
+  // First redirect to unlock, verify address (checking key validity server-side)
+  // After that actually display modal.
   window.showMemberBenefitsModal = async (options) => {
+    const membershipNames = options.map(({ name }) => name);
+
+    if (!window.memberBenefitsAddress) {
+      // Immediately redirect to Unlock Protocol before showing modal
+      onConnect(membershipNames);
+
+      return;
+    } else {
+      const modal = document.querySelector("#mb-modal");
+      openModal(modal);
+    }
+
     // Show memberships and current status
     const template = document.getElementById("template-memberships");
     const membershipsContainer = document.getElementById("memberships");
@@ -229,18 +234,19 @@
       })
     );
 
-    // initWeb3Modal();
-    document.querySelector("#btn-connect").addEventListener("click", onConnect);
+    document
+      .querySelector("#btn-connect")
+      .addEventListener("click", function () {
+        onConnect(membershipNames);
+      });
     document
       .querySelector("#btn-disconnect")
       .addEventListener("click", onDisconnect);
 
-    if (window.memberBenefitsAddress) {
-      await fetchAccountData(
-        window.memberBenefitsAddress,
-        window.memberBenefitsUnlocked
-      );
-    }
+    await fetchAccountData(
+      window.memberBenefitsAddress,
+      window.memberBenefitsUnlocked
+    );
   };
 
   function updateUnlockUIElements(unlockState) {
@@ -391,10 +397,11 @@
       );
     }
 
-    openModalButtons = document.querySelectorAll("[data-modal-target]");
+    // openModalButtons = document.querySelectorAll("[data-modal-target]");
     closeModalButtons = document.querySelectorAll("[data-close-button]");
     overlay = document.getElementById("overlay");
 
+    /*
     if (openModalButtons) {
       openModalButtons.forEach((button) => {
         button.addEventListener("click", () => {
@@ -402,7 +409,7 @@
           openModal(modal);
         });
       });
-    }
+    }*/
 
     if (overlay) {
       overlay.addEventListener("click", () => {
