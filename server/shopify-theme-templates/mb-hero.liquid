@@ -16,6 +16,11 @@
   {%- endstyle -%}
 {%- endif -%}
 {%- style -%}
+
+.displayed-after-unlocked {
+  display: none;
+}
+
 .hero__inner {
   cursor: pointer !important;
 }
@@ -100,7 +105,7 @@
 {% endstyle %}
 
 
-<div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section"
+<div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked or section.settings.image-unlocked != blank -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section"
   onclick='window.showMemberBenefitsModal([{name: "{{ section.settings.membership }}",locks: window.locksByMembershipName["{{ section.settings.membership }}"]}])'>
   {%- if section.settings.hero_layout == 'fixed_width' -%}
     <div class="page-width">
@@ -112,7 +117,9 @@
          id="Hero-{{ section.id }}"
          data-layout="{{ section.settings.hero_layout }}"
          data-image-loading-animation>
+
       {%- assign img_url = section.settings.image | img_url: '1x1' | replace: '_1x1.', '_{width}x.' -%}
+
       {%- if section.settings.image.width < max_width -%}
         {%- assign slide_width = section.settings.image.width -%}
       {%- endif -%}
@@ -125,9 +132,7 @@
             <div class="rte-setting mega-subtitle{% if section.settings.text_size == 'large' %} mega-subtitle--large{% endif %}">{{ section.settings.text }}</div>
           {%- endif -%}
           {%- if section.settings.button_label != blank -%}
-            <a class="btn hero__btn">
-              {{ section.settings.button_label | escape }}
-            </a>
+            <a class="btn hero__btn">{{ section.settings.button_label | escape }}</a>
           {%- endif -%}
         </div>
       </div>
@@ -154,6 +159,7 @@
       </noscript>
     </div>
   {%- else -%}
+    {%- assign hero-image = section.settings.image -%}
     <div class="hero hero--{{ section.settings.hero_size }} hero-{{ section.id }}{% if section.settings.title != blank or section.settings.text != blank %} hero__overlay{% endif %} box ratio-container lazyload js"
          id="Hero-{{ section.id }}"
          data-layout="{{ section.settings.hero_layout }}"
@@ -163,8 +169,8 @@
           aria-label="{{ section.settings.image.alt | escape }}"
           data-alt="{{ section.settings.image.alt | escape }}"
           {% endunless %}
-         data-bg="{{ section.settings.image | img_url: '300x300' }}"
-         data-bgset="{% include 'bgset', image: section.settings.image %}"
+         data-bg="{{ hero-image | img_url: '300x300' }}"
+         data-bgset="{% include 'bgset', image: hero-image %}"
          data-sizes="auto"
          data-parent-fit="cover"
          style="background-position: {{ section.settings.alignment }};"
@@ -177,20 +183,118 @@
     {%- endif -%}
       <div class="hero__inner">
         <div class="page-width text-center">
-          {%- if section.settings.title != blank -%}
-            <h2 class="h1 mega-title{% if section.settings.text_size == 'large' %} mega-title--large{% endif %}">{{ section.settings.title | escape }}</h2>
-          {%- endif -%}
-          {%- if section.settings.text != blank -%}
-            <div class="rte-setting mega-subtitle{% if section.settings.text_size == 'large' %} mega-subtitle--large{% endif %}">{{ section.settings.text }}</div>
-          {%- endif -%}
 
-          {%- if section.settings.button_label != blank -%}
-            <a class="btn hero__btn"
-              aria-label="connect_link">
-              {{- section.settings.button_label | escape -}}
-            </a>
-          {%- endif -%}
+        {%- if section.settings.title != blank -%}
+          <h2 class="h1 mega-title{% if section.settings.text_size == 'large' %} mega-title--large{% endif %}">{{ section.settings.title | escape }}</h2>
+        {%- endif -%}
+        {%- if section.settings.text != blank -%}
+          <div class="rte-setting mega-subtitle{% if section.settings.text_size == 'large' %} mega-subtitle--large{% endif %}">{{ section.settings.text }}</div>
+        {%- endif -%}
+        {%- if section.settings.button_label != blank -%}
+          <a class="btn hero__btn">{{ section.settings.button_label | escape }}</a>
+        {%- endif -%}
 
+        </div>
+      </div>
+    </div>
+    <noscript>
+      <div class="hero hero--{{ section.settings.hero_size }}{% if section.settings.title != blank or section.settings.text != blank %} hero__overlay{% endif %}"{% if section.settings.image %}{% unless section.settings.image.alt == blank %} role="img" aria-label="{{ section.settings.image.alt | escape }}"{% endunless %} style="background-image: url('{{ section.settings.image | img_url: '2048x' }}'); background-position: center {{ section.settings.alignment }};"{% endif %}></div>
+    </noscript>
+  {%- endif -%}
+  {%- if section.settings.hero_layout == 'fixed_width' -%}
+    </div>
+  {%- endif -%}
+</div>
+
+<div data-section-id="{{ section.id }}" {%- if section.settings.image-unlocked != blank -%}class="displayed-after-unlocked"{%- endif -%} data-section-type="hero-section"
+  onclick='window.showMemberBenefitsModal([{name: "{{ section.settings.membership }}",locks: window.locksByMembershipName["{{ section.settings.membership }}"]}])'>
+  {%- if section.settings.hero_layout == 'fixed_width' -%}
+    <div class="page-width">
+  {%- endif -%}
+  {%- if section.settings.hero_layout == 'fixed_width' and section.settings.hero_size ==  'adapt' -%}
+    {%- assign slide_width = 1090 -%}
+    {%- assign min_aspect_ratio = section.settings.image.aspect_ratio | default: 2.0 -%}
+    <div class="hero-fixed-width hero--adapt"
+         id="Hero-{{ section.id }}"
+         data-layout="{{ section.settings.hero_layout }}"
+         data-image-loading-animation>
+
+      {%- assign img_url = section.settings.image-unlocked | img_url: '1x1' | replace: '_1x1.', '_{width}x.' -%}
+
+      {%- if section.settings.image.width < max_width -%}
+        {%- assign slide_width = section.settings.image.width -%}
+      {%- endif -%}
+      <div class="hero-fixed-width__content">
+        <div class="page-width text-center">
+          {%- if section.settings.title-unlocked != blank -%}
+            <h2 class="h1 mega-title{% if section.settings.text_size == 'large' %} mega-title--large{% endif %}">{{ section.settings.title-unlocked | escape }}</h2>
+          {%- endif -%}
+          {%- if section.settings.text-unlocked != blank -%}
+            <div class="rte-setting mega-subtitle{% if section.settings.text_size == 'large' %} mega-subtitle--large{% endif %}">{{ section.settings.text-unlocked }}</div>
+          {%- endif -%}
+          {%- if section.settings.button_label-unlocked != blank -%}
+            <a class="btn hero__btn">{{ section.settings.button_label-unlocked | escape }}</a>
+          {%- endif -%}
+        </div>
+      </div>
+      {%- if section.settings.image != blank -%}
+        <img class="hero-fixed-width__image lazyload lazypreload"
+             data-src="{{ img_url }}"
+             data-widths="[180, 360, 470, 600, 770, 970, 1060, 1280, 1512, 1728, 2048]"
+             data-aspectratio="{{ section.settings.image.aspect_ratio }}"
+             data-sizes="auto"
+             style="{%- if slide_width <= max_width -%}
+                      {%- assign min_width = slide_width | times: 100 | divided_by: max_width -%}
+                      min-width: {{ min_width }}%;
+                    {%- endif -%}
+                    object-position: {{ section.settings.alignment }};"
+             alt="{{ section.settings.image.alt | escape }}">
+      {%- else -%}
+        <span>
+          {% capture current %}{% cycle 1, 2 %}{% endcapture %}
+          {{ 'lifestyle-' | append: current | placeholder_svg_tag: 'placeholder-svg' }}
+        </span>
+      {%- endif -%}
+      <noscript>
+        <div class="hero-fixed-width__image"{% if section.settings.image %}{% unless section.settings.image.alt == blank %} role="img" aria-label="{{ section.settings.image.alt | escape }}"{% endunless %} style="background-image: url('{{ section.settings.image | img_url: '2048x' }}'); background-position: center {{ section.settings.alignment }};"{% endif %}></div>
+      </noscript>
+    </div>
+  {%- else -%}
+
+    {%- assign hero-image = section.settings.image-unlocked  -%}
+
+    <div class="hero hero--{{ section.settings.hero_size }} hero-{{ section.id }}{% if section.settings.title != blank or section.settings.text != blank %} hero__overlay{% endif %} box ratio-container lazyload js"
+         id="Hero-{{ section.id }}"
+         data-layout="{{ section.settings.hero_layout }}"
+         {%- if section.settings.image -%}
+          {% unless section.settings.image.alt == blank %}
+          role="img"
+          aria-label="{{ section.settings.image.alt | escape }}"
+          data-alt="{{ section.settings.image.alt | escape }}"
+          {% endunless %}
+         data-bg="{{ hero-image | img_url: '300x300' }}"
+         data-bgset="{% include 'bgset', image: hero-image %}"
+         data-sizes="auto"
+         data-parent-fit="cover"
+         style="background-position: {{ section.settings.alignment }};"
+         data-image-loading-animation
+         {%- endif -%}>
+    {%- if section.settings.image == blank -%}
+      <div class="placeholder-background">
+        {{ 'lifestyle-1' | placeholder_svg_tag: 'placeholder-svg' }}
+      </div>
+    {%- endif -%}
+      <div class="hero__inner">
+        <div class="page-width text-center">
+          {%- if section.settings.title-unlocked != blank -%}
+            <h2 class="h1 mega-title{% if section.settings.text_size == 'large' %} mega-title--large{% endif %}">{{ section.settings.title-unlocked | escape }}</h2>
+          {%- endif -%}
+          {%- if section.settings.text-unlocked != blank -%}
+            <div class="rte-setting mega-subtitle{% if section.settings.text_size == 'large' %} mega-subtitle--large{% endif %}">{{ section.settings.text-unlocked }}</div>
+          {%- endif -%}
+          {%- if section.settings.button_label-unlocked != blank -%}
+            <a class="btn hero__btn">{{ section.settings.button_label-unlocked | escape }}</a>
+          {%- endif -%}
         </div>
       </div>
     </div>
@@ -276,6 +380,35 @@
       "default": {
         "en": "<p>Use overlay text to give your customers insight into your membership offering.<br/>When this is clicked, the wallet can be connected and benefits may be applied.</p>"
       }
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "info": "Leave empty to hide button.",
+      "label": {
+        "cs": "Text tlačítka",
+        "da": "Knaptekst",
+        "de": "Button-Name",
+        "en": "Button label",
+        "es": "Etiqueta de botón",
+        "fi": "Tekstipainike",
+        "fr": "Texte du bouton",
+        "it": "Etichetta pulsante",
+        "ja": "ボタンのラベル",
+        "ko": "버튼 레이블",
+        "nb": "Knappetikett",
+        "nl": "Knoplabel",
+        "pl": "Przycisk z etykietą",
+        "pt-BR": "Etiqueta de botão",
+        "pt-PT": "Etiqueta do botão",
+        "sv": "Knappetikett",
+        "th": "ป้ายกำกับปุ่ม",
+        "tr": "Düğme etiketi",
+        "vi": "Nhãn nút",
+        "zh-CN": "按钮标签",
+        "zh-TW": "按鈕標籤"
+      },
+      "default": "Connect Wallet"
     },
     {
       "type": "image_picker",
@@ -784,37 +917,32 @@
       "type": "checkbox",
       "id": "enable_hide_unlocked",
       "label": "Hidden if unlocked",
-      "info": "If enabled, the hero will not be displayed to members.",
+      "info": "If enabled, the hero will not be displayed to members (unless an alternative image is provided in the next setting).",
       "default": true
     },
     {
+      "type": "image_picker",
+      "id": "image-unlocked",
+      "label": "Image after unlocked",
+      "info": "If set, this image will be displayed to members after they connected their wallet via Unlock Protocol."
+    },
+    {
       "type": "text",
-      "id": "button_label",
-      "info": "Leave empty to hide button.",
-      "label": {
-        "cs": "Text tlačítka",
-        "da": "Knaptekst",
-        "de": "Button-Name",
-        "en": "Button label",
-        "es": "Etiqueta de botón",
-        "fi": "Tekstipainike",
-        "fr": "Texte du bouton",
-        "it": "Etichetta pulsante",
-        "ja": "ボタンのラベル",
-        "ko": "버튼 레이블",
-        "nb": "Knappetikett",
-        "nl": "Knoplabel",
-        "pl": "Przycisk z etykietą",
-        "pt-BR": "Etiqueta de botão",
-        "pt-PT": "Etiqueta do botão",
-        "sv": "Knappetikett",
-        "th": "ป้ายกำกับปุ่ม",
-        "tr": "Düğme etiketi",
-        "vi": "Nhãn nút",
-        "zh-CN": "按钮标签",
-        "zh-TW": "按鈕標籤"
-      },
-      "default": "Connect Wallet"
+      "id": "title-unlocked",
+      "label": "Heading after unlocked",
+      "info": "Override the heading displayed to members."
+    },
+    {
+      "type": "richtext",
+      "id": "text-unlocked",
+      "label": "Text after unlocked",
+      "info":"Override the text displayed to members."
+    },
+    {
+      "type": "text",
+      "id": "button_label-unlocked",
+      "info": "Override the button text.",
+      "label": "Button text after unlocked"
     }
   ],
   "presets": [

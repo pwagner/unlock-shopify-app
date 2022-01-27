@@ -269,11 +269,21 @@
       document.querySelectorAll(".hidden-after-unlocked").forEach((element) => {
         element.style.display = "none";
       });
+      document
+        .querySelectorAll(".displayed-after-unlocked")
+        .forEach((element) => {
+          element.style.display = "block";
+        });
     } else if (unlockState === "locked") {
       // Show sections with the according setting after disconnecting the wallet
       document.querySelectorAll(".hidden-after-unlocked").forEach((element) => {
         element.style.display = "block";
       });
+      document
+        .querySelectorAll(".displayed-after-unlocked")
+        .forEach((element) => {
+          element.style.display = "none";
+        });
     }
   }
 
@@ -469,6 +479,11 @@
             .forEach((element) => {
               element.style.display = "none";
             });
+          document
+            .querySelectorAll(".displayed-after-unlocked")
+            .forEach((element) => {
+              element.style.display = "block";
+            });
         } else {
           self.querySelector(".rightContent").style.color = "red";
           self.querySelector(".rightContent").textContent = " Inactive";
@@ -480,6 +495,11 @@
             .querySelectorAll(".hidden-after-unlocked")
             .forEach((element) => {
               element.style.display = "block";
+            });
+          document
+            .querySelectorAll(".displayed-after-unlocked")
+            .forEach((element) => {
+              element.style.display = "none";
             });
         }
       };
