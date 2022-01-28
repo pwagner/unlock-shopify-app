@@ -47,6 +47,7 @@ const {
   WEB3_PROVIDER_POLYGON, // Infura
   WEB3_PROVIDER_OPTIMISM, // Infura
   WEB3_PROVIDER_XDAI, // Ankr
+  WEB3_PROVIDER_BSC, // Ankr
 } = process.env;
 const port = parseInt(PORT, 10) || 8081;
 const dev = NODE_ENV !== "production";
@@ -81,7 +82,7 @@ const web3Optimism = new Web3(
   new Web3.providers.HttpProvider(WEB3_PROVIDER_OPTIMISM)
 );
 const web3Xdai = new Web3(new Web3.providers.HttpProvider(WEB3_PROVIDER_XDAI));
-// TODO: add BSC support (via Ankr ?)
+const web3Bsc = new Web3(new Web3.providers.HttpProvider(WEB3_PROVIDER_BSC));
 
 const loadActiveShopsFromStorage = async () => {
   const activeShopsFromStorage = await sessionStorage.getAsync(
@@ -396,25 +397,28 @@ app.prepare().then(async () => {
         // Check if lock address is deployed on a productive network, and if the key is valid
         if (await checkKeyValidity(web3Mainnet, lockAddress, address)) {
           validMemberships.push(lockAddress);
-          console.log("Found membership on mainnet!");
+          console.log("Found membership on Mainnet!");
         }
 
         if (await checkKeyValidity(web3Xdai, lockAddress, address)) {
           validMemberships.push(lockAddress);
-          console.log("Found membership on xdai!");
+          console.log("Found membership on Xdai!");
         }
 
         if (await checkKeyValidity(web3Polygon, lockAddress, address)) {
           validMemberships.push(lockAddress);
-          console.log("Found membership on polygon!");
+          console.log("Found membership on Polygon!");
         }
 
         if (await checkKeyValidity(web3Optimism, lockAddress, address)) {
           validMemberships.push(lockAddress);
-          console.log("Found membership on optimism!");
+          console.log("Found membership on Optimism!");
         }
 
-        // TODO: add network BSC
+        if (await checkKeyValidity(web3Bsc, lockAddress, address)) {
+          validMemberships.push(lockAddress);
+          console.log("Found membership on BSC!");
+        }
       }
 
       console.log("validMemberships", validMemberships);

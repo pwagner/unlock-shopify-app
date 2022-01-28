@@ -128,7 +128,7 @@ const LockMultiAdder = ({
               Add
             </Button>
           }
-          helpText="Enter the smart contract address (Ethereum, XDai, or Polygon)."
+          helpText="Enter the smart contract address (Ethereum, BSC, Polygon, XDai)."
           label="Address"
           prefix="Address:"
           labelHidden
