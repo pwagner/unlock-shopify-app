@@ -43,6 +43,10 @@ const {
   SCOPES,
   HOST,
   PORT,
+  WEB3_PROVIDER_MAINNET, // Infura
+  WEB3_PROVIDER_POLYGON, // Infura
+  WEB3_PROVIDER_OPTIMISM, // Infura
+  WEB3_PROVIDER_XDAI, // Ankr
 } = process.env;
 const port = parseInt(PORT, 10) || 8081;
 const dev = NODE_ENV !== "production";
@@ -65,34 +69,18 @@ Shopify.Context.initialize({
   ),
 });
 
-// Web3 instances for all productive networks (potentially having locks)
+// Web3 instances for productive networks (potentially having locks)
 
-// TODO: env vars for API keys!
-
-// Infura
 const web3Mainnet = new Web3(
-  new Web3.providers.HttpProvider(
-    "https://mainnet.infura.io/v3/6dd11545940046c0979b5087cafd816e"
-  )
+  new Web3.providers.HttpProvider(WEB3_PROVIDER_MAINNET)
 );
 const web3Polygon = new Web3(
-  new Web3.providers.HttpProvider(
-    "https://polygon-mainnet.infura.io/v3/ac9e710e20ce4afea766da1a18ef0ba1"
-  )
+  new Web3.providers.HttpProvider(WEB3_PROVIDER_POLYGON)
 );
 const web3Optimism = new Web3(
-  new Web3.providers.HttpProvider(
-    "https://optimism-mainnet.infura.io/v3/e9fc0363e5c74313ae2f2531186645ef"
-  )
+  new Web3.providers.HttpProvider(WEB3_PROVIDER_OPTIMISM)
 );
-
-// Ankr
-const web3Xdai = new Web3(
-  new Web3.providers.HttpProvider(
-    "https://apis.ankr.com/79e6b002c297431f9e7ec8d74567d743/8a8d4081c8172f13f658a2d3bb64e499/xdai/fast/main"
-  )
-);
-
+const web3Xdai = new Web3(new Web3.providers.HttpProvider(WEB3_PROVIDER_XDAI));
 // TODO: add BSC support (via Ankr ?)
 
 const loadActiveShopsFromStorage = async () => {
@@ -349,16 +337,19 @@ app.prepare().then(async () => {
       .call()
       .then((result) => {
         if (result === true) {
-          console.log("FOUND VALID MEMBERSHIP", lockAddress);
+          console.log("Found valid key", lockAddress);
 
           return true;
         }
 
         return false;
       })
-      .catch((err) => {
-        // TODO: Lock not found or network error, auto-retry?
-        console.log("Could not validate key");
+      .catch(async (err) => {
+        const networkId = await web3.eth.net.getId();
+        console.log(
+          "Could not validate key (or find lock) on network:",
+          networkId
+        );
 
         if (
           err
@@ -367,7 +358,7 @@ app.prepare().then(async () => {
               `Returned values aren't valid, did it run Out of Gas? You might also see this error if you are not using the correct ABI for the contract you are retrieving data from, requesting data from a block number that does not exist, or querying a node which is not fully synced.`
             ) !== -1
         ) {
-          console.log("LOCK NOT on network?");
+          // console.log("Lock probably not on network");
         }
 
         if (
@@ -375,7 +366,7 @@ app.prepare().then(async () => {
             .toString()
             .indexOf(`Invalid JSON RPC response: "Server Internal Error`) !== -1
         ) {
-          console.log("ANKR or provider ERROR");
+          console.log("Web3 provider ERROR");
         }
 
         return false;
@@ -390,12 +381,13 @@ app.prepare().then(async () => {
       const decoded = ethers.utils.base64.decode(code);
       const message = JSON.parse(ethers.utils.toUtf8String(decoded));
       const address = ethers.utils.verifyMessage(message.d, message.s);
+      console.log("Looking up keys of", address);
 
       // Use state to load URL for redirect back to shop.
       const storedString = await sessionStorage.getAsync(state);
       const data = JSON.parse(storedString);
       const { redirectUri, locks, memberships } = data;
-      console.log("looked up memberships", memberships);
+      console.log("Checked for memberships", memberships);
       const finalUrl = new URL(redirectUri);
 
       // Validate memberships for recovered address.
@@ -404,22 +396,22 @@ app.prepare().then(async () => {
         // Check if lock address is deployed on a productive network, and if the key is valid
         if (await checkKeyValidity(web3Mainnet, lockAddress, address)) {
           validMemberships.push(lockAddress);
-          console.log("found membership on mainnet");
+          console.log("Found membership on mainnet!");
         }
 
         if (await checkKeyValidity(web3Xdai, lockAddress, address)) {
           validMemberships.push(lockAddress);
-          console.log("found membership on xdai");
+          console.log("Found membership on xdai!");
         }
 
         if (await checkKeyValidity(web3Polygon, lockAddress, address)) {
           validMemberships.push(lockAddress);
-          console.log("found membership on polygon");
+          console.log("Found membership on polygon!");
         }
 
         if (await checkKeyValidity(web3Optimism, lockAddress, address)) {
           validMemberships.push(lockAddress);
-          console.log("found membership on optimism");
+          console.log("Found membership on optimism!");
         }
 
         // TODO: add network BSC
