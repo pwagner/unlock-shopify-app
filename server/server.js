@@ -71,18 +71,47 @@ Shopify.Context.initialize({
 });
 
 // Web3 instances for productive networks (potentially having locks)
+const web3ByNetwork = {};
 
-const web3Mainnet = new Web3(
-  new Web3.providers.HttpProvider(WEB3_PROVIDER_MAINNET)
-);
-const web3Polygon = new Web3(
-  new Web3.providers.HttpProvider(WEB3_PROVIDER_POLYGON)
-);
-const web3Optimism = new Web3(
-  new Web3.providers.HttpProvider(WEB3_PROVIDER_OPTIMISM)
-);
-const web3Xdai = new Web3(new Web3.providers.HttpProvider(WEB3_PROVIDER_XDAI));
-const web3Bsc = new Web3(new Web3.providers.HttpProvider(WEB3_PROVIDER_BSC));
+if (WEB3_PROVIDER_MAINNET) {
+  web3ByNetwork.ethereum = new Web3(
+    new Web3.providers.HttpProvider(WEB3_PROVIDER_MAINNET)
+  );
+} else {
+  console.log("Missing WEB3_PROVIDER_MAINNET");
+}
+
+if (WEB3_PROVIDER_POLYGON) {
+  web3ByNetwork.polygon = new Web3(
+    new Web3.providers.HttpProvider(WEB3_PROVIDER_POLYGON)
+  );
+} else {
+  console.log("Missing WEB3_PROVIDER_BSC");
+}
+
+if (WEB3_PROVIDER_OPTIMISM) {
+  web3ByNetwork.optimism = new Web3(
+    new Web3.providers.HttpProvider(WEB3_PROVIDER_OPTIMISM)
+  );
+} else {
+  console.log("Missing WEB3_PROVIDER_OPTIMISM");
+}
+
+if (WEB3_PROVIDER_XDAI) {
+  web3ByNetwork.xdai = new Web3(
+    new Web3.providers.HttpProvider(WEB3_PROVIDER_XDAI)
+  );
+} else {
+  console.log("Missing WEB3_PROVIDER_XDAI");
+}
+
+if (WEB3_PROVIDER_BSC) {
+  web3ByNetwork.bsc = new Web3(
+    new Web3.providers.HttpProvider(WEB3_PROVIDER_BSC)
+  );
+} else {
+  console.log("Missing WEB3_PROVIDER_BSC");
+}
 
 const loadActiveShopsFromStorage = async () => {
   const activeShopsFromStorage = await sessionStorage.getAsync(
@@ -395,29 +424,17 @@ app.prepare().then(async () => {
       const validMemberships = [];
       for (let lockAddress of locks) {
         // Check if lock address is deployed on a productive network, and if the key is valid
-        if (await checkKeyValidity(web3Mainnet, lockAddress, address)) {
-          validMemberships.push(lockAddress);
-          console.log("Found membership on Mainnet!");
-        }
-
-        if (await checkKeyValidity(web3Xdai, lockAddress, address)) {
-          validMemberships.push(lockAddress);
-          console.log("Found membership on Xdai!");
-        }
-
-        if (await checkKeyValidity(web3Polygon, lockAddress, address)) {
-          validMemberships.push(lockAddress);
-          console.log("Found membership on Polygon!");
-        }
-
-        if (await checkKeyValidity(web3Optimism, lockAddress, address)) {
-          validMemberships.push(lockAddress);
-          console.log("Found membership on Optimism!");
-        }
-
-        if (await checkKeyValidity(web3Bsc, lockAddress, address)) {
-          validMemberships.push(lockAddress);
-          console.log("Found membership on BSC!");
+        for (let networkName in web3ByNetwork) {
+          if (
+            await checkKeyValidity(
+              web3ByNetwork[networkName],
+              lockAddress,
+              address
+            )
+          ) {
+            validMemberships.push(lockAddress);
+            console.log(`Found membership on ${networkName}!`);
+          }
         }
       }
 
