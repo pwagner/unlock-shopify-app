@@ -76,7 +76,8 @@
     if (parts.length == 2) return parts.pop().split(";").shift();
   }
 
-  async function onConnect(displayedMemberships) {
+  async function onConnect(displayedMemberships, shouldOpenNewTab) {
+    console.log("onConnect displayedMemberships", displayedMemberships);
     const currentUrl = window.location.href;
     const unlockAppUrl = `__UNLOCK_APP_URL__`;
 
@@ -91,7 +92,12 @@
       // state is used to identify the user and redirect him to the right URL.
       const domain = new URL(unlockAppUrl).host;
       const unlockCheckoutUrl = `https://app.unlock-protocol.com/checkout?client_id=${domain}&redirect_uri=${unlockAppUrl}&state=${state}`;
-      window.location.href = unlockCheckoutUrl;
+
+      if (shouldOpenNewTab) {
+        window.open(unlockCheckoutUrl, "_blank");
+      } else {
+        window.location.href = unlockCheckoutUrl;
+      }
     } catch (err) {
       console.log("Error trying to get state and store redirect URL.", err);
     }
@@ -202,12 +208,16 @@
 
   // First redirect to unlock, verify address (checking key validity server-side)
   // After that actually display modal.
-  window.showMemberBenefitsModal = async (options) => {
-    const membershipNames = options.map(({ name }) => name);
+  window.showMemberBenefitsModal = async (memberships, shouldOpenNewTab) => {
+    console.log("shouldOpenNewTab", shouldOpenNewTab, typeof shouldOpenNewTab);
+    const membershipNames = memberships.map(({ name }) => name);
 
-    if (!window.memberBenefitsAddress) {
+    if (
+      !window.memberBenefitsAddress &&
+      !shouldOpenNewTab // Otherwise browser may block the popup, because a more immediate user-action is required.
+    ) {
       // Immediately redirect to Unlock Protocol before showing modal
-      onConnect(membershipNames);
+      onConnect(membershipNames, shouldOpenNewTab);
 
       return;
     } else {
@@ -222,8 +232,8 @@
 
     // Add rows for all memberships and check status
     await Promise.all(
-      options.map(async ({ name, locks }) => {
-        console.log("modal options locks", locks);
+      memberships.map(async ({ name, locks }) => {
+        console.log("modal memberships locks", locks);
         const clone = template.content.cloneNode(true);
         clone.querySelector(".membership-name").textContent = name;
         clone.querySelector(".membership-validity").classList.add(...locks);
@@ -237,7 +247,7 @@
     document
       .querySelector("#btn-connect")
       .addEventListener("click", function () {
-        onConnect(membershipNames);
+        onConnect(membershipNames, shouldOpenNewTab);
       });
     document
       .querySelector("#btn-disconnect")

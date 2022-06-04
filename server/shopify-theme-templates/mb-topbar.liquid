@@ -134,7 +134,7 @@ window.showMemberBenefitsModal([
       {% if forloop.last != true %},{% endif %}
     {% endcase %}
   {% endfor %}
-])
+], {{ section.settings.enable_open_new_tab }})
 {% endcapture %}
 <div
     data-section-id="{{ section.id }}"
@@ -161,6 +161,13 @@ window.showMemberBenefitsModal([
       "label": "Hidden if unlocked",
       "info": "If enabled, the top-bar will not be displayed to members.",
       "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_open_new_tab",
+      "label": "Open in new tab",
+      "info": "If unchecked, the redirect happens in the same browser tab",
+      "default": false
     },
     {
       "type": "richtext",

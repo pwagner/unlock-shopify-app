@@ -106,7 +106,7 @@
 
 
 <div data-section-id="{{ section.id }}" {%- if section.settings.enable_hide_unlocked or section.settings.image-unlocked != blank -%}class="hidden-after-unlocked"{%- endif -%} data-section-type="hero-section"
-  onclick='window.showMemberBenefitsModal([{name: "{{ section.settings.membership }}",locks: window.locksByMembershipName["{{ section.settings.membership }}"]}])'>
+  onclick='window.showMemberBenefitsModal([{name: "{{ section.settings.membership }}",locks: window.locksByMembershipName["{{ section.settings.membership }}"]}], {{ section.settings.enable_open_new_tab }})'>
   {%- if section.settings.hero_layout == 'fixed_width' -%}
     <div class="page-width">
   {%- endif -%}
@@ -208,7 +208,7 @@
 
 {%- if section.settings.image-unlocked != blank -%}
   <div data-section-id="{{ section.id }}" class="displayed-after-unlocked" data-section-type="hero-section"
-    onclick='window.showMemberBenefitsModal([{name: "{{ section.settings.membership }}",locks: window.locksByMembershipName["{{ section.settings.membership }}"]}])'>
+    onclick='window.showMemberBenefitsModal([{name: "{{ section.settings.membership }}",locks: window.locksByMembershipName["{{ section.settings.membership }}"]}], {{ section.settings.enable_open_new_tab }})'>
     {%- if section.settings.hero_layout == 'fixed_width' -%}
       <div class="page-width">
     {%- endif -%}
@@ -411,6 +411,13 @@
         "zh-TW": "按鈕標籤"
       },
       "default": "Connect Wallet"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_open_new_tab",
+      "label": "Open in new tab",
+      "info": "If unchecked, the redirect happens in the same browser tab",
+      "default": false
     },
     {
       "type": "image_picker",
