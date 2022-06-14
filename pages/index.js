@@ -17,6 +17,7 @@ import { TitleBar, Context } from "@shopify/app-bridge-react";
 import { authenticatedFetch } from "@shopify/app-bridge-utils";
 import { Redirect } from "@shopify/app-bridge/actions";
 import MembershipForm from "../components/MembershipForm";
+import FeedbackToast from "../components/FeedbackToast";
 
 class Index extends React.Component {
   static contextType = Context;
@@ -35,6 +36,10 @@ class Index extends React.Component {
       isAddingMembership: false,
       hasLoadedLocks: false,
       formErrorMessage: "",
+      hasSavingFeedback: false,
+      hasSavingError: false,
+      hasDeletionFeedback: false,
+      hasDeletionError: false,
     };
   }
 
@@ -89,6 +94,19 @@ class Index extends React.Component {
                 />
               ))
             )}
+
+            {this.state.hasSavingFeedback ? (
+              <FeedbackToast message="Membership settings saved." />
+            ) : null}
+            {this.state.hasSavingError ? (
+              <FeedbackToast message="Could not save membership." />
+            ) : null}
+            {this.state.hasDeletionFeedback ? (
+              <FeedbackToast message="Membership removed." />
+            ) : null}
+            {this.state.hasDeletionError ? (
+              <FeedbackToast message="Could not remove membership." />
+            ) : null}
 
             {this.state.hasLoadedLocks ? (
               this.state.isAddingMembership ? (
@@ -248,8 +266,12 @@ class Index extends React.Component {
   };
 
   handleSaveMembership = async (e) => {
-    this.setState({ formErrorMessage: "" });
-    this.setState({ isLoading: true });
+    this.setState({
+      formErrorMessage: "",
+      isLoading: true,
+      hasSavingFeedback: false,
+      hasSavingError: false,
+    });
     try {
       const otherMemberships = this.state.memberships
         .filter(
@@ -294,8 +316,6 @@ class Index extends React.Component {
         otherMemberships,
       };
 
-      console.log("membershipDetails", membershipDetails);
-
       const saveRes = await this.fetchWithAuth("/api/saveMembership", {
         method: "POST",
         body: JSON.stringify(membershipDetails),
@@ -307,12 +327,19 @@ class Index extends React.Component {
       // console.log("Saved lock");
       await this.loadMemberships();
     } catch (err) {
-      console.log("Error in handleSaveMembership:", err);
+      console.log("Error trying to save membership:", err);
+      this.setState({ isLoading: false, hasSavingError: true });
     }
-    this.setState({ isLoading: false });
+
+    this.setState({ isLoading: false, hasSavingFeedback: true });
   };
 
   handleDeleteMembership = async (name, metafieldId) => {
+    this.setState({
+      hasDeletionFeedback: false,
+      hasDeletionError: false,
+    });
+
     try {
       const saveRes = await this.fetchWithAuth("/api/removeMembership", {
         method: "POST",
@@ -328,9 +355,13 @@ class Index extends React.Component {
         memberships: this.state.memberships.filter(
           ({ lockName }) => lockName !== name
         ),
+        hasDeletionFeedback: true,
       });
     } catch (err) {
-      console.log("Error in handleDeleteMembership:", err);
+      console.log("Error trying to delete membership:", err);
+      this.setState({
+        hasDeletionError: true,
+      });
     }
   };
 

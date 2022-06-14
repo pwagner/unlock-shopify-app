@@ -41,8 +41,6 @@ const LockMultiAdder = ({
   );
 
   const handleAddAddress = useCallback(() => {
-    console.log("otherMembershipLockAddresses", otherMembershipLockAddresses);
-
     if (otherMembershipLockAddresses.indexOf(inputValue) > -1) {
       setIsDuplicateAddress(true);
 
@@ -128,7 +126,7 @@ const LockMultiAdder = ({
               Add
             </Button>
           }
-          helpText="Enter the smart contract address (Ethereum, BSC, Polygon, XDai)."
+          helpText="Enter the smart contract address (Ethereum, BSC, Polygon, XDai, Optimism)."
           label="Address"
           prefix="Address:"
           labelHidden
