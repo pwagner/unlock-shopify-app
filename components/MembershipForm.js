@@ -8,7 +8,10 @@ import {
   Select,
   Checkbox,
   Heading,
+  Icon,
+  InlineError,
 } from "@shopify/polaris";
+import { DeleteMinor } from "@shopify/polaris-icons";
 
 import { LockMultiAdder } from "./LockMultiAdder";
 
@@ -23,6 +26,7 @@ const MembershipForm = forwardRef(
       onDelete,
       isLoading,
       otherMembershipLockAddresses,
+      formErrorMessage,
     },
     ref
   ) => {
@@ -36,7 +40,7 @@ const MembershipForm = forwardRef(
             small
             onClick={() => onDelete(value.lockName, value.metafieldId)}
           >
-            X
+            <Icon source={DeleteMinor} color="base" />
           </Button>
         </Stack>
         <br />
@@ -71,6 +75,7 @@ const MembershipForm = forwardRef(
             />
 
             <Stack distribution="trailing">
+              <InlineError message={formErrorMessage} id="formError" />
               <Button primary submit disabled={isLoading}>
                 {isLoading ? "Saving..." : "Save"}
               </Button>

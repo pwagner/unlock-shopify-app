@@ -34,6 +34,7 @@ class Index extends React.Component {
       isLoading: false,
       isAddingMembership: false,
       hasLoadedLocks: false,
+      formErrorMessage: "",
     };
   }
 
@@ -73,6 +74,7 @@ class Index extends React.Component {
                   onSave={this.handleSaveMembership}
                   onDelete={this.handleDeleteMembership}
                   isLoading={this.state.isLoading}
+                  formErrorMessage={this.state.formErrorMessage}
                   otherMembershipLockAddresses={this.state.memberships.reduce(
                     (acc, { lockAddresses }) => {
                       if (!lockAddresses || lockAddresses.length < 1)
@@ -246,6 +248,7 @@ class Index extends React.Component {
   };
 
   handleSaveMembership = async (e) => {
+    this.setState({ formErrorMessage: "" });
     this.setState({ isLoading: true });
     try {
       const otherMemberships = this.state.memberships
@@ -259,14 +262,28 @@ class Index extends React.Component {
           discountId,
         }));
       const metafieldId = e.target.elements.metafieldId.value;
-
       const lockName = e.target.elements.lockName.value;
-      // const address = e.target.elements.lockAddress.value;
       const lockAddresses = JSON.parse(e.target.elements.lockAddresses.value);
-      console.log("handleSaveMembership lockAddresses", lockAddresses);
+
+      if (lockAddresses.length < 1) {
+        this.setState({
+          formErrorMessage: "Please add at least one lock!",
+          isLoading: false,
+        });
+        return;
+      }
 
       const isEnabled = e.target.elements.enabled.checked;
       const discountId = e.target.elements.discountId.value;
+
+      if (!discountId) {
+        this.setState({
+          formErrorMessage: "Please select a discount!",
+          isLoading: false,
+        });
+
+        return;
+      }
 
       const membershipDetails = {
         lockAddresses,
