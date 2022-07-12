@@ -1035,6 +1035,15 @@ app.prepare().then(async () => {
   router.get("(.*)", async (ctx) => {
     const shop = ctx.query.shop;
 
+    if (Shopify.Context.IS_EMBEDDED_APP && shop) {
+      ctx.res.setHeader(
+        "Content-Security-Policy",
+        `frame-ancestors https://${shop} https://admin.shopify.com;`
+      );
+    } else {
+      ctx.res.setHeader("Content-Security-Policy", `frame-ancestors 'none';`);
+    }
+
     // This shop hasn't been seen yet, go through OAuth to create a session
     if (ACTIVE_SHOPIFY_SHOPS[shop] === undefined) {
       ctx.redirect(`/auth?shop=${shop}`);
@@ -1045,6 +1054,7 @@ app.prepare().then(async () => {
 
   server.use(router.allowedMethods());
   server.use(router.routes());
+
   server.listen(port, () => {
     console.log(`> Ready on http://localhost:${port}`);
   });
